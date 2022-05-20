@@ -18,6 +18,7 @@ start :: fn do
     end
 
     love.draw = fn do
+        gamestate.draw' gs
     end
 
     love.keypressed = fn key, scancode, repeat do

@@ -21,8 +21,11 @@ sylt: $(SYLT)
 $(SYLT): $(SYLT_COMPILER_FILES)
 	cd sylt-lang/ && cargo build
 
-$(OUTPUT_FILE): $(SYLT_FILES) $(SYLT) $(RES_FILES)
+$(OUTPUT): $(RES_FILES) 
+	rm -rf $(OUTPUT)
 	mkdir -p $(OUTPUT)
-	cp -rf res $(OUTPUT)/res
+	cp -rf res $(OUTPUT)
+
+$(OUTPUT_FILE): $(SYLT_FILES) $(SYLT) $(OUTPUT)
 	$(SYLT) --output $(OUTPUT_FILE) $(SY_MAIN)
 	

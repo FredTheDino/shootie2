@@ -141,9 +141,9 @@ MouseButton :: enum Left, Right, Middle end
 
 mouseButtonToInt :: fn m ->
     case m do
-        Left -> 0 end
-        Right -> 1 end
-        Middle -> 2 end
+        Left -> 1 end
+        Right -> 2 end
+        Middle -> 3 end
     end
 end
 

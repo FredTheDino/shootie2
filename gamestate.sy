@@ -1,4 +1,5 @@
 use input
+use assets
 use gfx
 
 Attack :: enum
@@ -9,7 +10,24 @@ Triangle :: blob {
     attacks: (Attack, Attack, Attack)
 }
 
-draw_triangle :: fn at: (int, int), t: Triangle do
+scale :: (2., 2.)
+
+screen_to_pos :: fn screen: (float, float) -> (int, int)
+    (math.round(screen[0] / (scale[0] * 20.0)), math.round((screen[1] - scale[1] * 5.0) / (scale[1] * 27.0)))
+end
+
+pos_to_screen :: fn at: (int, int) -> (float, float)
+    (as_float(at[0]) * scale[0] * 20.0, as_float(at[1]) * scale[1] * 27.0)
+end
+
+draw_triangle :: fn at: (int, int), t: Triangle, color: gfx.Color do
+    if rem(at[0] + at[1], 2) == 0 do
+        angle :: 0.0
+        assets.triangle.drawTintedCentered' color, pos_to_screen(at) + (-4.35, 5.0) * scale, angle, scale
+    else
+        angle :: math.pi / 3.0
+        assets.triangle.drawTintedCentered' color, pos_to_screen(at), angle, scale
+    end
 end
 
 GameState :: enum
@@ -19,7 +37,8 @@ end
 
 State :: blob {
     current_state: GameState,
-    triangles: dict.Dict((int, int), Triangle)
+    triangles: dict.Dict((int, int), Triangle),
+    hover: (int, int),
 }
 
 grid_map :: fn lo: int, hi: int, f: (pu (int, int) -> *X) -> dict.Dict((int, int), *X)
@@ -44,7 +63,8 @@ new :: fn ->
 
     State {
         triangles: triangles,
-        current_state: GameState.Playing
+        current_state: GameState.Playing,
+        hover: (0, 0),
     }
 end
 
@@ -54,6 +74,10 @@ update :: fn state: State, delta: float -> State
             if input.isKeyDown' input.Key.A do
                 state.current_state = GameState.Menu
             end
+
+            if input.mouseButtonDown' input.MouseButton.Left do
+                state.hover = screen_to_pos' input.mousePos'
+            end
         end
         Menu ->
             if input.isKeyDown' input.Key.B do
@@ -62,5 +86,22 @@ update :: fn state: State, delta: float -> State
         end
     end
     state
+end
+
+draw :: fn state: State do
+    case state.current_state do
+        Playing ->
+            state.triangles -> dict.for_each' fn pair do
+                color :: if pair[0] == state.hover do
+                    gfx.rgb(1.0, 0.0, 0.0)
+                else
+                    gfx.rgb(1.0, 1.0, 1.0)
+                end
+                draw_triangle' pair[0], pair[1], color
+            end
+        end
+        Menu ->
+        end
+    end
 end
 
