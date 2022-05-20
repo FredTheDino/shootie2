@@ -1,0 +1,36 @@
+use input
+
+State :: blob {
+    a: int,
+    current_state: GameState
+}
+
+GameState :: enum
+    Playing
+    Menu
+end
+
+
+new :: fn ->
+    State {
+        a: 0,
+        current_state: GameState.Playing
+    }
+end
+
+update :: fn state: State, delta: float -> State
+    case state.current_state do
+        Playing ->
+            if input.isKeyDown' input.Key.A do
+                state.current_state = GameState.Menu
+            end
+        end
+        Menu ->
+            if input.isKeyDown' input.Key.B do
+                state.current_state = GameState.Playing
+            end
+        end
+    end
+    state
+end
+
