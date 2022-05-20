@@ -4,7 +4,7 @@ OUTPUT=output
 OUTPUT_FILE=$(OUTPUT)/main.lua
 
 SY_MAIN=main.sy
-SYLT_FILES=$(wildcard *.sy)
+SYLT_FILES=$(shell find . -iname "*.sy")
 SYLT_COMPILER_FILES=$(shell find sylt-lang -iname "*.rs")
 
 .PHONY: run clean sylt
