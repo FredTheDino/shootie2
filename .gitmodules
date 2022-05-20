@@ -1,0 +1,3 @@
+[submodule "sylt-lang"]
+	path = sylt-lang
+	url = git@github.com:sylt-lang/sylt-lang.git
