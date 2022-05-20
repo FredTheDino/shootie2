@@ -1,19 +1,49 @@
 use input
+use gfx
 
-State :: blob {
-    a: int,
-    current_state: GameState
+Attack :: enum
+    Simple
+end
+
+Triangle :: blob {
+    attacks: (Attack, Attack, Attack)
 }
+
+draw_triangle :: fn at: (int, int), t: Triangle do
+end
 
 GameState :: enum
     Playing
     Menu
 end
 
+State :: blob {
+    current_state: GameState,
+    triangles: dict.Dict((int, int), Triangle)
+}
+
+grid_map :: fn lo: int, hi: int, f: (pu (int, int) -> *X) -> dict.Dict((int, int), *X)
+    out :: []
+    list.range(lo, hi) -> list.for_each' fn x do
+        list.range(lo, hi) -> list.for_each' fn y do
+            pos :: (x, y)
+            list.push' out, (pos, f(pos))
+        end
+    end
+    dict.from_list(out)
+end
 
 new :: fn ->
+    triangles :: grid_map(
+        0,
+        20,
+        pu pos -> Triangle
+            (Triangle { attacks: (Attack.Simple, Attack.Simple, Attack.Simple) })
+        end
+    )
+
     State {
-        a: 0,
+        triangles: triangles,
         current_state: GameState.Playing
     }
 end
