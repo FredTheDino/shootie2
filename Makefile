@@ -8,7 +8,7 @@ SYLT_FILES=$(shell find . -iname "*.sy")
 SYLT_COMPILER_FILES=$(shell find sylt-lang -iname "*.rs")
 RES_FILES=$(shell find res/)
 
-.PHONY: run clean sylt
+.PHONY: run clean sylt $(SYLT)
 
 run: $(OUTPUT_FILE)
 	love $(OUTPUT)
