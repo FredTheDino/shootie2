@@ -95,13 +95,28 @@ explosion_from_bullet :: fn bullet ->
     }
 end
 
-update_explosion :: fn explosion, delta do
+explosion_radius :: pu explosion ->
+    100.0 / (1.0 + explosion.lifetime)
+end
+
+inside_explosion_radius :: pu explosion, pos ->
+    math.distance(pos, explosion.pos) < explosion_radius(explosion)
+end
+
+update_explosion :: fn explosion, state, delta do
     explosion.lifetime += delta
+
+    if inside_explosion_radius(explosion, state.player_a.pos) do
+        state.player_a.killed = state.frame
+    end
+    if inside_explosion_radius(explosion, state.player_b.pos) do
+        state.player_b.killed = state.frame
+    end
 end
 
 draw_explosion :: fn explosion do
     color :: id_to_color' explosion.owner
-    gfx.drawCircle' color, explosion.pos, 100.0 / (1.0 + explosion.lifetime)
+    gfx.drawCircle' color, explosion.pos, explosion_radius' explosion
 end
 
 Explosion :: blob {
@@ -116,7 +131,7 @@ Player :: blob {
     vel: (float, float),
     size: (float, float),
     grounded: bool,
-    alive: bool,
+    killed: int,
     fired: int,
 
     bullets: [Bullet],
@@ -131,7 +146,7 @@ new_player :: pu id: int ->
         vel: (0.0, 0.0),
         size: (1.0, 1.0),
         grounded: true,
-        alive: true,
+        killed: -1,
         fired: -1000,
 
         bullets: [],
@@ -236,7 +251,7 @@ id_to_color :: pu id ->
 end
 
 draw_player :: fn player do
-    if player.alive do
+    if player.killed == -1 do
         color :: id_to_color' player.id
         gfx.drawRectCentered' color, player.pos, player_size
     end
@@ -329,63 +344,81 @@ end
 update :: fn state: State, delta: float, gamepads -> State
     case state.current_state do
         Playing ->
-            read_input( state.player_a
-                      , input.Key.A, input.Key.D
-                      , input.Key.W, input.Key.S
-                      , dict.get(gamepads, state.player_a.id) -> maybe.orDefault(new_gamepad())
-                      , state.frame )
-
-            read_input( state.player_b
-                      , input.Key.Left, input.Key.Right
-                      , input.Key.Up, input.Key.Down
-                      , dict.get(gamepads, state.player_b.id) -> maybe.orDefault(new_gamepad())
-                      , state.frame )
-
-            if not state.player_a.alive do
+            all_alive :: state.player_a.killed == -1 and state.player_b.killed == -1
+            if (not all_alive) and (state.player_a.killed + 60 == state.frame or state.player_b.killed + 60 == state.frame) do
                 state.player_a.bullets = []
                 state.player_b.bullets = []
+
+                state.explosions = []
 
                 state.player_a = new_player(state.player_a.id)
-                state.player_a.pos = find_furthest_from' spawns, state.player_b.pos
-            end
-
-            other_player_pos :: state.player_a.pos
-            if not state.player_b.alive do
-                state.player_a.bullets = []
-                state.player_b.bullets = []
+                state.player_a.pos = list.random_choice(spawns) -> maybe.orDefault((0.0, 0.0))
 
                 state.player_b = new_player(state.player_b.id)
                 state.player_b.pos = find_furthest_from' spawns, state.player_a.pos
+            else
+                state.player_a.input.move = 0.0
+                state.player_b.input.move = 0.0
             end
 
+            push_wall :: 320.0
+            if abs(state.player_a.pos[0]) > push_wall do
+                x :: state.player_a.pos[0]
+                dx :: (abs(x) - push_wall) * delta * 60.0
+                state.player_a.vel -= (sign(x) * dx, 0.0)
+            end
+
+            if abs(state.player_b.pos[0]) > push_wall do
+                x :: state.player_b.pos[0]
+                dx :: (abs(x) - push_wall) * delta * 60.0
+                state.player_b.vel -= (sign(x) * dx, 0.0)
+            end
+
+            if all_alive do
+                read_input( state.player_a
+                          , input.Key.A, input.Key.D
+                          , input.Key.W, input.Key.S
+                          , dict.get(gamepads, state.player_a.id) -> maybe.orDefault(new_gamepad())
+                          , state.frame )
+
+                read_input( state.player_b
+                          , input.Key.Left, input.Key.Right
+                          , input.Key.Up, input.Key.Down
+                          , dict.get(gamepads, state.player_b.id) -> maybe.orDefault(new_gamepad())
+                          , state.frame )
+            end
 
             aim :: math.normalize(state.player_b.pos - state.player_a.pos)
             update_player(state.player_a, aim, state.frame, delta)
             aim :: math.normalize(state.player_a.pos - state.player_b.pos)
             update_player(state.player_b, aim, state.frame, delta)
 
-           state.player_a.grounded = false
+
+            state.player_a.grounded = false
             state.player_b.grounded = false
             ground -> for_each' fn g do
                 collision_with_player(state.player_a, g)
                 collision_with_player(state.player_b, g)
 
                 check_bullet_collison :: fn b do
-                    if b.lifetime > 3.0 do
+                    if (b.lifetime > 3.0
+                    or (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, g[0], g[1])
+                    or (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, state.player_a.pos, player_size)
+                    or (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, state.player_b.pos, player_size)) do
                         b.alive = false
-                    elif (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, g[0], g[1]) do
-                        b.alive = false
-                    elif (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, state.player_a.pos, player_size) do
-                        state.player_a.alive = false
-                        b.alive = false
-                    elif (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, state.player_b.pos, player_size) do
-                        state.player_b.alive = false
-                        b.alive = false
+                        ret
+                    end
+                    state.explosions -> list.for_each' fn x do
+                        if inside_explosion_radius' x, b.pos do
+                            b.alive = false
+                        end
                     end
                 end
 
                 state.player_a.bullets -> list.for_each' check_bullet_collison
                 state.player_b.bullets -> list.for_each' check_bullet_collison
+
+
 
                 chain' state.player_a.bullets, state.player_b.bullets, fn a do
                     chain' state.player_a.bullets, state.player_b.bullets, fn b do
@@ -409,7 +442,7 @@ update :: fn state: State, delta: float, gamepads -> State
                 state.player_a.bullets = state.player_a.bullets -> list.filter' pu b -> b.alive end
                 state.player_b.bullets = state.player_b.bullets -> list.filter' pu b -> b.alive end
 
-                state.explosions -> list.for_each' fn x do update_explosion(x, delta) end
+                state.explosions -> list.for_each' fn x do update_explosion(x, state, delta) end
                 state.explosions = state.explosions -> list.filter' pu x -> x.lifetime < 3.0 end
             end
             platform -> for_each' fn g do
@@ -435,8 +468,8 @@ ground :: [
     ((0.0, 0.0), (100.0, 20.0)),
     ((0.0, 20.0), (600.0, 20.0)),
     ((0.0, 20.0), (600.0, 20.0)),
-    ((300.0, 10.0), (100.0, 40.0)),
-    ((-300.0, 10.0), (100.0, 40.0)),
+    ((340.0, 10.0), (140.0, 40.0)),
+    ((-340.0, 10.0), (140.0, 40.0)),
 
     ((0.0, -105.0), (40.0, 40.0)),
 ]
