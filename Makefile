@@ -1,4 +1,4 @@
-SYLT=sylt-lang/target/debug/sylt
+SYLT=sylt-lang/target/release/sylt
 
 OUTPUT=output
 OUTPUT_FILE=$(OUTPUT)/main.lua
@@ -19,7 +19,7 @@ clean:
 sylt: $(SYLT)
 
 $(SYLT): $(SYLT_COMPILER_FILES)
-	cd sylt-lang/ && cargo build
+	cd sylt-lang/ && cargo build --release
 
 $(OUTPUT): $(RES_FILES) 
 	rm -rf $(OUTPUT)
