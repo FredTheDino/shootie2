@@ -34,13 +34,18 @@ start :: fn do
     // Input stuff - please ignore
     map_gamepad :: fn gp, f: (fn Gamepad -> Gamepad) do
         xx : fn * -> int : unsafe.unsafe_force' gp.getID
-        id :: xx' gp
+        id :: (xx' gp) - 1
         given :: f(maybe.orDefault(dict.get(gamepads, id), new_gamepad()))
         dict.update(gamepads, id, given)
     end
 
     love.gamepadaxis = fn gp, axis_name, value do
         if axis_name != "leftx" do ret end
+        value :: if abs(value) < 0.02 do
+            0.0
+        else
+            value
+        end
 
         map_gamepad' gp, fn pad ->
             pad.move = value
