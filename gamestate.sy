@@ -242,14 +242,12 @@ update_camera :: fn given, delta, a, b -> Camera
     target :: center + half_screen
 
     Camera {
-        pos: lerp_v2(delta * 2.0, given.pos, center * (1.0, 0.0) + half_screen),
+        pos: lerp_v2(delta * 1.0, given.pos, center * (1.0, 0.0) + half_screen + (0.0, 100.0)),
     }
 end
 
 push_camera :: fn camera do
     gfx.reset_camera()
-
-    print' camera
     gfx.move_camera' camera.pos
 end
 
