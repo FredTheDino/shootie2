@@ -23,7 +23,6 @@ PlayerInput :: blob {
     jump: ButtonState,
     trigger: ButtonState,
     shoot: int,
-
 }
 
 is_up :: pu x -> bool
@@ -60,6 +59,8 @@ end
 player_size :: (20.0, 20.0)
 
 Bullet :: blob {
+    alive: bool,
+
     owner: int,
     lifetime: float,
 
@@ -74,12 +75,9 @@ update_bullet :: fn bullet, delta do
     bullet.lifetime += delta
     bullet.pos += bullet.vel
 
-    if 1.5 < bullet.lifetime do
-        bullet.vel += (0.0, 10.0 * delta)
-    end
-
-    if 0.1 < bullet.lifetime and bullet.lifetime < 2.0 do
-        bullet.vel -= bullet.original_dir * (8.0, 8.0) * (delta, delta)
+    if bullet.lifetime > 0.4 do
+        ss :: delta * 4.0
+        bullet.vel -= bullet.original_dir * (ss, ss)
     end
 end
 
@@ -89,14 +87,37 @@ draw_bullet :: fn bullet do
     gfx.drawRectCenteredOutline(color, bullet.pos, bullet_hitbox_size)
 end
 
+explosion_from_bullet :: fn bullet ->
+    Explosion {
+        owner: bullet.owner,
+        pos: bullet.pos,
+        lifetime: 0.0,
+    }
+end
+
+update_explosion :: fn explosion, delta do
+    explosion.lifetime += delta
+end
+
+draw_explosion :: fn explosion do
+    color :: id_to_color' explosion.owner
+    gfx.drawCircle' color, explosion.pos, 100.0 / (1.0 + explosion.lifetime)
+end
+
+Explosion :: blob {
+    owner: int,
+    pos: (float, float),
+    lifetime: float,
+}
+
 Player :: blob {
     id: int,
     pos: (float, float),
     vel: (float, float),
     size: (float, float),
     grounded: bool,
-    throwDir: bool,
     alive: bool,
+    fired: int,
 
     bullets: [Bullet],
 
@@ -111,7 +132,7 @@ new_player :: pu id: int ->
         size: (1.0, 1.0),
         grounded: true,
         alive: true,
-        throwDir: false,
+        fired: -1000,
 
         bullets: [],
 
@@ -124,7 +145,12 @@ new_player :: pu id: int ->
     }
 end
 
-read_input :: fn inp, left, right, jump, trigger, grounded, num_bullets, gamepad, frame do
+read_input :: fn player, left, right, jump, trigger, gamepad, frame do
+    inp := player.input
+    num_bullets :: list.len' player.bullets
+    grounded :: player.grounded
+    fire_cooldown :: 10
+
     inp.move = math.clamp(
         bool_to_int(input.isKeyDown(right))
         - bool_to_int(input.isKeyDown(left))
@@ -138,7 +164,7 @@ read_input :: fn inp, left, right, jump, trigger, grounded, num_bullets, gamepad
         inp.jump = ButtonState.Up frame
     end
 
-    if num_bullets < 3 do
+    if num_bullets < 3 and player.fired + fire_cooldown < frame do
         if (not (input.isKeyDown(trigger) or gamepad.shoot) and not is_up(inp.trigger)) do
             inp.shoot = frame - get_frame(inp.trigger)
             inp.trigger = ButtonState.Up frame
@@ -151,34 +177,34 @@ end
 
 update_player :: fn player, aim_dir, frame, delta do
 
-    jump_force :: 400.0
+    jump_force :: 350.0
     hover_force :: 1200.0
-    move_force :: 1000.0
-    gravity :: 3000.0
+    move_force :: 2000.0
+    gravity :: 2000.0
 
     player.vel += (player.input.move * move_force * delta, 0.0)
     if abs(player.input.move) > 0.1 do
-        player.vel = (player.vel[0] * pow(0.01, delta), player.vel[1])
-    else
         player.vel = (player.vel[0] * pow(0.0001, delta), player.vel[1])
+    else
+        player.vel = (player.vel[0] * pow(0.00001, delta), player.vel[1])
     end
 
     if pressed(player.input.jump, frame) do
-        player.vel += (0.0, -jump_force)
+        player.vel = (player.vel[0], -jump_force)
     elif held(player.input.jump, frame, 20) do
         player.vel += (0.0, -hover_force * delta)
     end
     player.vel += (0.0, gravity * delta)
 
     if released(player.input.trigger, frame) do
-        dir :: if player.throwDir do 1.0 else -1.0 end
-        aim_dir :: (dir, dir) * aim_dir
-        offset :: 20.0
-        vel :: 3.0 + min(as_float(player.input.shoot) * 0.1, 5.0)
+        player.fired = frame
+        offset :: 25.0
+        vel :: 5.0 + min(as_float(player.input.shoot) * 0.1, 5.0)
         player.bullets -> list.push(
             Bullet {
                 owner: player.id,
                 lifetime: 0.0,
+                alive: true,
 
                 original_dir: aim_dir,
                 pos: player.pos + aim_dir * (offset, offset),
@@ -186,8 +212,6 @@ update_player :: fn player, aim_dir, frame, delta do
 
             }
         )
-
-        player.throwDir = not player.throwDir
     end
     player.bullets -> for_each' fn bullet do
         update_bullet' bullet, delta
@@ -264,6 +288,7 @@ State :: blob {
     frame: int,
 
     camera: Camera,
+    explosions: [Explosion],
 
     player_a: Player,
     player_b: Player,
@@ -277,6 +302,7 @@ new :: fn ->
         frame: 0,
 
         camera: new_camera(player_a, player_b),
+        explosions: [],
 
         player_a: player_a,
         player_b: player_b,
@@ -295,22 +321,23 @@ find_furthest_from :: pu points, a -> (float, float)
     point[1]
 end
 
+chain :: fn a: [*A], b: [*A], f: fn *A -> void do
+    a -> list.for_each' f
+    b -> list.for_each' f
+end
+
 update :: fn state: State, delta: float, gamepads -> State
     case state.current_state do
         Playing ->
-            read_input( state.player_a.input
+            read_input( state.player_a
                       , input.Key.A, input.Key.D
                       , input.Key.W, input.Key.S
-                      , state.player_a.grounded
-                      , list.len(state.player_a.bullets)
                       , dict.get(gamepads, state.player_a.id) -> maybe.orDefault(new_gamepad())
                       , state.frame )
 
-            read_input( state.player_b.input
+            read_input( state.player_b
                       , input.Key.Left, input.Key.Right
                       , input.Key.Up, input.Key.Down
-                      , state.player_b.grounded
-                      , list.len(state.player_a.bullets)
                       , dict.get(gamepads, state.player_b.id) -> maybe.orDefault(new_gamepad())
                       , state.frame )
 
@@ -343,29 +370,47 @@ update :: fn state: State, delta: float, gamepads -> State
                 collision_with_player(state.player_a, g)
                 collision_with_player(state.player_b, g)
 
-                state.player_a.bullets = state.player_a.bullets -> list.filter' pu b ->
-                    b.lifetime > 3.0 or (0.0, 0.0) == collision.box_vs_box(b.pos, bullet_hitbox_size, g[0], g[1])
-                end
-                state.player_b.bullets = state.player_b.bullets -> list.filter' pu b ->
-                    b.lifetime > 3.0 or (0.0, 0.0) == collision.box_vs_box(b.pos, bullet_hitbox_size, g[0], g[1])
+                check_bullet_collison :: fn b do
+                    if b.lifetime > 3.0 do
+                        b.alive = false
+                    elif (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, g[0], g[1]) do
+                        b.alive = false
+                    elif (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, state.player_a.pos, player_size) do
+                        state.player_a.alive = false
+                        b.alive = false
+                    elif (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, state.player_b.pos, player_size) do
+                        state.player_b.alive = false
+                        b.alive = false
+                    end
                 end
 
-                state.player_a.bullets -> list.for_each' fn b do
-                    if (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, state.player_a.pos, player_size) do
-                        state.player_a.alive = false
-                    end
-                    if (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, state.player_b.pos, player_size) do
-                        state.player_b.alive = false
-                    end
-                end
-                state.player_b.bullets -> list.for_each' fn b do
-                    if (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, state.player_a.pos, player_size) do
-                        state.player_a.alive = false
-                    end
-                    if (0.0, 0.0) != collision.box_vs_box(b.pos, bullet_hitbox_size, state.player_b.pos, player_size) do
-                        state.player_b.alive = false
+                state.player_a.bullets -> list.for_each' check_bullet_collison
+                state.player_b.bullets -> list.for_each' check_bullet_collison
+
+                chain' state.player_a.bullets, state.player_b.bullets, fn a do
+                    chain' state.player_a.bullets, state.player_b.bullets, fn b do
+                        if (0.0, 0.0) != collision.box_vs_box( b.pos, bullet_hitbox_size
+                                                             , a.pos, bullet_hitbox_size) do
+                            a.alive = false
+                            b.alive = false
+                        end
                     end
                 end
+
+                add_explosion :: fn a do
+                    if not a.alive do
+                        list.push(state.explosions, explosion_from_bullet(a))
+                    end
+                end
+
+                state.player_a.bullets -> list.for_each' add_explosion
+                state.player_b.bullets -> list.for_each' add_explosion
+
+                state.player_a.bullets = state.player_a.bullets -> list.filter' pu b -> b.alive end
+                state.player_b.bullets = state.player_b.bullets -> list.filter' pu b -> b.alive end
+
+                state.explosions -> list.for_each' fn x do update_explosion(x, delta) end
+                state.explosions = state.explosions -> list.filter' pu x -> x.lifetime < 3.0 end
             end
             platform -> for_each' fn g do
                 collision_with_player_platform(state.player_a, g)
@@ -393,13 +438,21 @@ ground :: [
     ((300.0, 10.0), (100.0, 40.0)),
     ((-300.0, 10.0), (100.0, 40.0)),
 
-    ((-370.0, -180.0), (40.0, 400.0)),
-    ((370.0, -180.0), (40.0, 400.0)),
+    ((0.0, -105.0), (40.0, 40.0)),
 ]
 
+hh :: 10.0
 platform :: [
-    ((150.0, -30.0), (100.0, 10.0)),
-    ((-150.0, -30.0), (100.0, 10.0)),
+    ((150.0, -40.0), (100.0, hh)),
+    ((-150.0, -40.0), (100.0, hh)),
+
+    ((0.0, -90.0), (200.0, hh)),
+
+    ((240.0, -90.0), (100.0, hh)),
+    ((-240.0, -90.0), (100.0, hh)),
+
+    ((150.0, -140.0), (100.0, hh)),
+    ((-150.0, -140.0), (100.0, hh)),
 ]
 
 spawns :: [
@@ -461,6 +514,8 @@ draw :: fn state: State do
 
             draw_player(state.player_a)
             draw_player(state.player_b)
+
+            state.explosions -> list.for_each' draw_explosion
 
             ground -> for_each' fn g do
                 draw_object(g, gfx.rgba(1.0, 1.0, 1.0, 1.0))
