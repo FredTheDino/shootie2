@@ -1,0 +1,20 @@
+
+abs_f2 :: pu xx: (float, float) ->
+    (abs(xx[0]), abs(xx[1]))
+end
+
+box_vs_box :: pu p_a: (float, float), s_a: (float, float), p_b: (float, float), s_b: (float, float) ->
+    dp :: p_a - p_b
+    ds :: (s_a + s_b) * (0.5, 0.5)
+    depth :: abs_f2(dp) - ds
+
+    if depth[0] < 0.0 and depth[1] < 0.0 do
+        if depth[0] > depth[1] do
+            (sign(dp[0]) * depth[0], 0.0)
+        else
+            (0.0, sign(dp[1]) * depth[1])
+        end
+    else
+        (0.0, 0.0)
+    end
+end
