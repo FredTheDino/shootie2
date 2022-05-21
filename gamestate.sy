@@ -94,6 +94,7 @@ Player :: blob {
     vel: (float, float),
     size: (float, float),
     grounded: bool,
+    throwDir: bool,
     alive: bool,
 
     bullets: [Bullet],
@@ -109,6 +110,7 @@ new_player :: pu id: int ->
         size: (1.0, 1.0),
         grounded: true,
         alive: true,
+        throwDir: false,
 
         bullets: [],
 
@@ -167,6 +169,8 @@ update_player :: fn player, aim_dir, frame, delta do
     player.vel += (0.0, gravity * delta)
 
     if released(player.input.trigger, frame) do
+        dir :: if player.throwDir do 1.0 else -1.0 end
+        aim_dir :: (dir, dir) * aim_dir
         offset :: 20.0
         vel :: 3.0 + min(as_float(player.input.shoot) * 0.1, 5.0)
         player.bullets -> list.push(
@@ -180,6 +184,8 @@ update_player :: fn player, aim_dir, frame, delta do
 
             }
         )
+
+        player.throwDir = not player.throwDir
     end
     player.bullets -> for_each' fn bullet do
         update_bullet' bullet, delta
@@ -211,6 +217,42 @@ draw_player :: fn player do
     player.bullets -> for_each' draw_bullet
 end
 
+Camera :: blob {
+    pos: (float, float),
+}
+
+new_camera :: fn a, b -> Camera
+    camera :: Camera {
+        pos: (0.0, 0.0),
+    }
+    update_camera' camera, 1.0, a, b
+end
+
+lerp :: pu f, a: float, b: float -> float
+    (1.0 - f) * a + f * b
+end
+
+lerp_v2 :: pu f, a: (float, float), b: (float, float) -> (float, float)
+    (lerp(f, a[0], b[0]), lerp(f, a[1], b[1]))
+end
+
+update_camera :: fn given, delta, a, b -> Camera
+    half_screen :: (love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
+    center :: (a.pos + b.pos) * (-0.5, -0.5)
+    target :: center + half_screen
+
+    Camera {
+        pos: lerp_v2(delta * 2.0, given.pos, center * (1.0, 0.0) + half_screen),
+    }
+end
+
+push_camera :: fn camera do
+    gfx.reset_camera()
+
+    print' camera
+    gfx.move_camera' camera.pos
+end
+
 // GS
 GameState :: enum
     Playing
@@ -221,18 +263,36 @@ State :: blob {
     current_state: GameState,
     frame: int,
 
+    camera: Camera,
+
     player_a: Player,
     player_b: Player,
 }
 
 new :: fn ->
+    player_a :: new_player(0)
+    player_b :: new_player(1)
     State {
         current_state: GameState.Playing,
         frame: 0,
 
-        player_a: new_player(0),
-        player_b: new_player(1),
+        camera: new_camera(player_a, player_b),
+
+        player_a: player_a,
+        player_b: player_b,
     }
+end
+
+find_furthest_from :: pu points, a -> (float, float)
+    point :: points -> list.fold' (0.0, (0.0, 0.0)), pu pos, out ->
+        distance :: math.distance(pos, a)
+        if distance > out[0] do
+            (distance, pos)
+        else
+            out
+        end
+    end
+    point[1]
 end
 
 update :: fn state: State, delta: float -> State
@@ -252,34 +312,21 @@ update :: fn state: State, delta: float -> State
                       , list.len(state.player_a.bullets)
                       , state.frame )
 
-            other_player_pos :: state.player_b.pos
             if not state.player_a.alive do
-                spawn_pos :: spawns -> list.fold' (0.0, (0.0, 0.0)), pu pos, out ->
-                    distance :: math.distance(pos, other_player_pos)
-                    if distance > out[0] do
-                        (distance, pos)
-                    else
-                        out
-                    end
-                end
+                state.player_a.bullets = []
+                state.player_b.bullets = []
 
                 state.player_a = new_player(state.player_a.id)
-                state.player_a.pos = spawn_pos[1]
+                state.player_a.pos = find_furthest_from' spawns, state.player_b.pos
             end
 
             other_player_pos :: state.player_a.pos
             if not state.player_b.alive do
-                spawn_pos :: spawns -> list.fold' (0.0, (0.0, 0.0)), pu pos, out ->
-                    distance :: math.distance(pos, other_player_pos)
-                    if distance > out[0] do
-                        (distance, pos)
-                    else
-                        out
-                    end
-                end
+                state.player_a.bullets = []
+                state.player_b.bullets = []
 
                 state.player_b = new_player(state.player_b.id)
-                state.player_b.pos = spawn_pos[1]
+                state.player_b.pos = find_furthest_from' spawns, state.player_a.pos
             end
 
 
@@ -322,6 +369,8 @@ update :: fn state: State, delta: float -> State
                 collision_with_player_platform(state.player_a, g)
                 collision_with_player_platform(state.player_b, g)
             end
+
+            state.camera = update_camera(state.camera, delta, state.player_a, state.player_b)
         end
         Menu ->
             if input.isKeyDown' input.Key.B do
@@ -333,14 +382,6 @@ update :: fn state: State, delta: float -> State
 
 
     state
-end
-
-follow_players :: fn state do
-    gfx.reset_camera()
-
-    center :: (state.player_a.pos + state.player_b.pos) * (-0.5, -0.5)
-    half_screen :: (love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
-    gfx.move_camera' center + half_screen
 end
 
 ground :: [
@@ -360,6 +401,9 @@ platform :: [
 ]
 
 spawns :: [
+    (-300.0, -20.0),
+    (300.0, -20.0),
+
     (-150.0, 0.0),
     (150.0, 0.0),
     (-0.0, -40.0),
@@ -411,7 +455,7 @@ end
 draw :: fn state: State do
     case state.current_state do
         Playing ->
-            follow_players' state
+            push_camera' state.camera
 
             draw_player(state.player_a)
             draw_player(state.player_b)
