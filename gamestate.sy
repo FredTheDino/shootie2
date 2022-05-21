@@ -2,34 +2,136 @@ use input
 use assets
 use gfx
 
-Attack :: enum
-    Simple
-end
-
-Triangle :: blob {
-    attacks: (Attack, Attack, Attack)
-}
-
-scale :: (2., 2.)
-
-screen_to_pos :: fn screen: (float, float) -> (int, int)
-    (math.round(screen[0] / (scale[0] * 20.0)), math.round((screen[1] - scale[1] * 5.0) / (scale[1] * 27.0)))
-end
-
-pos_to_screen :: fn at: (int, int) -> (float, float)
-    (as_float(at[0]) * scale[0] * 20.0, as_float(at[1]) * scale[1] * 27.0)
-end
-
-draw_triangle :: fn at: (int, int), t: Triangle, color: gfx.Color do
-    if rem(at[0] + at[1], 2) == 0 do
-        angle :: 0.0
-        assets.triangle.drawTintedCentered' color, pos_to_screen(at) + (-4.35, 5.0) * scale, angle, scale
+bool_to_int :: pu x: bool -> float
+    if x do
+        1.0
     else
-        angle :: math.pi / 3.0
-        assets.triangle.drawTintedCentered' color, pos_to_screen(at), angle, scale
+        0.0
     end
 end
 
+ButtonState :: enum
+    Up int
+    Down int
+end
+
+PlayerInput :: blob {
+    move: float,
+    jump: ButtonState,
+    charge: ButtonState,
+}
+
+is_up :: pu x -> bool
+    case x do
+        Up _ -> true end
+        Down _ -> false end
+    end
+end
+
+is_down :: pu x -> bool
+    not is_up(x)
+end
+
+pressed :: pu x, frame -> bool
+    is_down(x) and get_frame(x) == frame
+end
+
+get_frame :: pu x -> int
+    case x do
+        Up n -> n end
+        Down n -> n end
+    end
+end
+
+held :: pu x, frame, diff -> bool
+    is_down(x) and ((get_frame(x) + diff) >= frame)
+end
+
+
+Player :: blob {
+    id: int,
+    pos: (float, float),
+    vel: (float, float),
+    size: (float, float),
+
+    input: PlayerInput,
+}
+
+new_player :: pu id: int ->
+    Player {
+        id: id,
+        pos: (0.0, 0.0),
+        vel: (0.0, 0.0),
+        size: (1.0, 1.0),
+
+        input: PlayerInput {
+            move: 0.0,
+            jump: ButtonState.Up 0,
+            charge: ButtonState.Up 0,
+        }
+    }
+end
+
+read_input :: fn inp, left, right, jump, charge, frame do
+    inp.move = (
+        bool_to_int(input.isKeyDown(right))
+        - bool_to_int(input.isKeyDown(left))
+    )
+
+    if input.isKeyDown(jump) and is_up(inp.jump) do
+        inp.jump = ButtonState.Down frame
+    end
+    if not input.isKeyDown(jump) and not is_up(inp.jump) do
+        inp.jump = ButtonState.Up frame
+    end
+
+    if input.isKeyDown(charge) and is_up(inp.charge) do
+        inp.charge = ButtonState.Down frame
+    end
+    if not input.isKeyDown(charge) and not is_up(inp.charge) do
+        inp.charge = ButtonState.Up frame
+    end
+end
+
+update_player :: fn player, frame, delta do
+    jump_force :: 300.0
+    hover_force :: 500.0
+    move_force :: 1000.0
+    gravity :: 1000.0
+
+    player.vel += (player.input.move * move_force * delta, 0.0)
+    if abs(player.input.move) > 0.1 do
+        player.vel = (player.vel[0] * pow(0.01, delta), player.vel[1])
+    else
+        player.vel = (player.vel[0] * pow(0.0001, delta), player.vel[1])
+    end
+
+    if pressed(player.input.jump, frame) do
+        player.vel += (0.0, -jump_force)
+    elif held(player.input.jump, frame, 20) do
+        player.vel += (0.0, -hover_force * delta)
+    end
+    player.vel += (0.0, gravity * delta)
+
+    player.pos += player.vel * (delta, delta)
+
+    floor :: 400.0
+    if player.pos[1] >= floor do
+        player.pos = (player.pos[0], floor)
+        player.vel = (player.vel[0], min(0.0, player.vel[1]))
+    end
+end
+
+draw_player :: fn player do
+    color :: if player.id == 0 do
+        gfx.rgb(1.0, 0.2, 0.2)
+    else
+        gfx.rgb(0.2, 0.8, 0.8)
+    end
+    gfx.drawCircleOutline' color, player.pos, 20.0
+end
+
+// GS
 GameState :: enum
     Playing
     Menu
@@ -37,47 +139,37 @@ end
 
 State :: blob {
     current_state: GameState,
-    triangles: dict.Dict((int, int), Triangle),
-    hover: (int, int),
+    frame: int,
+
+    player_a: Player,
+    player_b: Player,
 }
 
-grid_map :: fn lo: int, hi: int, f: (pu (int, int) -> *X) -> dict.Dict((int, int), *X)
-    out :: []
-    list.range(lo, hi) -> list.for_each' fn x do
-        list.range(lo, hi) -> list.for_each' fn y do
-            pos :: (x, y)
-            list.push' out, (pos, f(pos))
-        end
-    end
-    dict.from_list(out)
-end
-
 new :: fn ->
-    triangles :: grid_map(
-        0,
-        20,
-        pu pos -> Triangle
-            (Triangle { attacks: (Attack.Simple, Attack.Simple, Attack.Simple) })
-        end
-    )
-
     State {
-        triangles: triangles,
         current_state: GameState.Playing,
-        hover: (0, 0),
+        frame: 0,
+
+        player_a: new_player(0),
+        player_b: new_player(1),
     }
 end
 
 update :: fn state: State, delta: float -> State
     case state.current_state do
         Playing ->
-            if input.isKeyDown' input.Key.A do
-                state.current_state = GameState.Menu
-            end
+            read_input( state.player_a.input
+                      , input.Key.A, input.Key.D
+                      , input.Key.W, input.Key.S
+                      , state.frame )
 
-            if input.mouseButtonDown' input.MouseButton.Left do
-                state.hover = screen_to_pos' input.mousePos'
-            end
+            read_input( state.player_b.input
+                      , input.Key.Left, input.Key.Right
+                      , input.Key.Up, input.Key.Down
+                      , state.frame )
+
+            update_player(state.player_a, state.frame, delta)
+            update_player(state.player_b, state.frame, delta)
         end
         Menu ->
             if input.isKeyDown' input.Key.B do
@@ -85,20 +177,16 @@ update :: fn state: State, delta: float -> State
             end
         end
     end
+    state.frame += 1
+
     state
 end
 
 draw :: fn state: State do
     case state.current_state do
         Playing ->
-            state.triangles -> dict.for_each' fn pair do
-                color :: if pair[0] == state.hover do
-                    gfx.rgb(1.0, 0.0, 0.0)
-                else
-                    gfx.rgb(1.0, 1.0, 1.0)
-                end
-                draw_triangle' pair[0], pair[1], color
-            end
+            draw_player(state.player_a)
+            draw_player(state.player_b)
         end
         Menu ->
         end
