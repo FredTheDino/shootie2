@@ -55,6 +55,7 @@ Player :: blob {
     pos: (float, float),
     vel: (float, float),
     size: (float, float),
+    grounded: bool,
 
     input: PlayerInput,
 }
@@ -65,6 +66,7 @@ new_player :: pu id: int ->
         pos: (100.0 + as_float(id), 0.0),
         vel: (0.0, 0.0),
         size: (1.0, 1.0),
+        grounded: true,
 
         input: PlayerInput {
             move: 0.0,
@@ -74,13 +76,13 @@ new_player :: pu id: int ->
     }
 end
 
-read_input :: fn inp, left, right, jump, charge, frame do
+read_input :: fn inp, left, right, jump, charge, grounded, frame do
     inp.move = (
         bool_to_int(input.isKeyDown(right))
         - bool_to_int(input.isKeyDown(left))
     )
 
-    if input.isKeyDown(jump) and is_up(inp.jump) do
+    if input.isKeyDown(jump) and is_up(inp.jump) and grounded do
         inp.jump = ButtonState.Down frame
     end
     if not input.isKeyDown(jump) and not is_up(inp.jump) do
@@ -96,10 +98,10 @@ read_input :: fn inp, left, right, jump, charge, frame do
 end
 
 update_player :: fn player, frame, delta do
-    jump_force :: 300.0
-    hover_force :: 500.0
+    jump_force :: 400.0
+    hover_force :: 1200.0
     move_force :: 1000.0
-    gravity :: 1000.0
+    gravity :: 3000.0
 
     player.vel += (player.input.move * move_force * delta, 0.0)
     if abs(player.input.move) > 0.1 do
@@ -163,16 +165,18 @@ update :: fn state: State, delta: float -> State
             read_input( state.player_a.input
                       , input.Key.A, input.Key.D
                       , input.Key.W, input.Key.S
-                      , state.frame )
+                      , state.player_a.grounded, state.frame )
 
             read_input( state.player_b.input
                       , input.Key.Left, input.Key.Right
                       , input.Key.Up, input.Key.Down
-                      , state.frame )
+                      , state.player_b.grounded, state.frame )
 
             update_player(state.player_a, state.frame, delta)
             update_player(state.player_b, state.frame, delta)
 
+            state.player_a.grounded = false
+            state.player_b.grounded = false
             collision_with_player(state.player_a, ground)
             collision_with_player(state.player_b, ground)
         end
@@ -200,6 +204,10 @@ collision_with_player :: fn player, object do
             (0.0, player.vel[1])
         end
         player.vel -= dv
+
+        if dim[1] > 0 do
+            player.grounded = true
+        end
     end
 end
 
