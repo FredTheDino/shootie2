@@ -2,6 +2,7 @@ use input
 use assets
 use gfx
 use collision
+from love use love
 
 bool_to_int :: pu x: bool -> float
     if x do
@@ -19,7 +20,7 @@ end
 PlayerInput :: blob {
     move: float,
     jump: ButtonState,
-    charge: ButtonState,
+    shoot: ButtonState,
 }
 
 is_up :: pu x -> bool
@@ -50,6 +51,30 @@ end
 
 player_size :: (20.0, 20.0)
 
+Bullet :: blob {
+    owner: int,
+    lifetime: float,
+
+    original_dir: (float, float),
+    pos: (float, float),
+    vel: (float, float),
+}
+
+update_bullet :: fn bullet, delta do
+    bullet.lifetime += delta
+    bullet.pos += bullet.vel
+
+    if 0.1 < bullet.lifetime and bullet.lifetime < 2.0 do
+        bullet.vel -= bullet.original_dir * (8.0, 8.0) * (delta, delta)
+    end
+end
+
+draw_bullet :: fn bullet do
+    color :: id_to_color' bullet.owner
+    assets.banana.drawTintedCentered(color, bullet.pos, bullet.lifetime * 10.0, (0.1, 0.1))
+    gfx.drawRectCenteredOutline(color, bullet.pos, (10.0, 10.0))
+end
+
 Player :: blob {
     id: int,
     pos: (float, float),
@@ -57,26 +82,30 @@ Player :: blob {
     size: (float, float),
     grounded: bool,
 
+    bullets: [Bullet],
+
     input: PlayerInput,
 }
 
 new_player :: pu id: int ->
     Player {
         id: id,
-        pos: (100.0 + as_float(id), 0.0),
+        pos: (as_float(id) * 40.0, -40.0),
         vel: (0.0, 0.0),
         size: (1.0, 1.0),
         grounded: true,
 
+        bullets: [],
+
         input: PlayerInput {
             move: 0.0,
             jump: ButtonState.Up 0,
-            charge: ButtonState.Up 0,
+            shoot: ButtonState.Up 0,
         }
     }
 end
 
-read_input :: fn inp, left, right, jump, charge, grounded, frame do
+read_input :: fn inp, left, right, jump, shoot, grounded, frame do
     inp.move = (
         bool_to_int(input.isKeyDown(right))
         - bool_to_int(input.isKeyDown(left))
@@ -89,15 +118,15 @@ read_input :: fn inp, left, right, jump, charge, grounded, frame do
         inp.jump = ButtonState.Up frame
     end
 
-    if input.isKeyDown(charge) and is_up(inp.charge) do
-        inp.charge = ButtonState.Down frame
+    if input.isKeyDown(shoot) and is_up(inp.shoot) do
+        inp.shoot = ButtonState.Down frame
     end
-    if not input.isKeyDown(charge) and not is_up(inp.charge) do
-        inp.charge = ButtonState.Up frame
+    if not input.isKeyDown(shoot) and not is_up(inp.shoot) do
+        inp.shoot = ButtonState.Up frame
     end
 end
 
-update_player :: fn player, frame, delta do
+update_player :: fn player, aim_dir, frame, delta do
     jump_force :: 400.0
     hover_force :: 1200.0
     move_force :: 1000.0
@@ -117,6 +146,26 @@ update_player :: fn player, frame, delta do
     end
     player.vel += (0.0, gravity * delta)
 
+    if pressed(player.input.shoot, frame) do
+        offset :: 4.0
+        vel :: 5.0
+        player.bullets -> list.push(
+            Bullet {
+                owner: player.id,
+                lifetime: 0.0,
+
+                original_dir: aim_dir,
+                pos: player.pos + aim_dir * (offset, offset),
+                vel: aim_dir * (vel, vel),
+
+            }
+        )
+    end
+
+    player.bullets -> for_each' fn bullet do
+        update_bullet' bullet, delta
+    end
+
     player.pos += player.vel * (delta, delta)
 
     floor :: 400.0
@@ -126,13 +175,19 @@ update_player :: fn player, frame, delta do
     end
 end
 
-draw_player :: fn player do
-    color :: if player.id == 0 do
+id_to_color :: pu id ->
+    if id == 0 do
         gfx.rgba(1.0, 0.2, 0.2, 0.5)
     else
         gfx.rgba(0.2, 0.8, 0.8, 0.5)
     end
+end
+
+draw_player :: fn player do
+    color :: id_to_color' player.id
     gfx.drawRectCentered' color, player.pos, player_size
+
+    player.bullets -> for_each' draw_bullet
 end
 
 // GS
@@ -172,13 +227,21 @@ update :: fn state: State, delta: float -> State
                       , input.Key.Up, input.Key.Down
                       , state.player_b.grounded, state.frame )
 
-            update_player(state.player_a, state.frame, delta)
-            update_player(state.player_b, state.frame, delta)
+            aim :: math.normalize(state.player_a.pos - state.player_b.pos)
+            update_player(state.player_a, aim, state.frame, delta)
+            aim :: math.normalize(state.player_b.pos - state.player_a.pos)
+            update_player(state.player_b, aim, state.frame, delta)
 
-            state.player_a.grounded = false
+           state.player_a.grounded = false
             state.player_b.grounded = false
-            collision_with_player(state.player_a, ground)
-            collision_with_player(state.player_b, ground)
+            ground -> for_each' fn g do
+                collision_with_player(state.player_a, g)
+                collision_with_player(state.player_b, g)
+            end
+            platform -> for_each' fn g do
+                collision_with_player_platform(state.player_a, g)
+                collision_with_player_platform(state.player_b, g)
+            end
         end
         Menu ->
             if input.isKeyDown' input.Key.B do
@@ -188,14 +251,58 @@ update :: fn state: State, delta: float -> State
     end
     state.frame += 1
 
+
     state
 end
 
-ground :: ((100.0, 100.0), (100.0, 20.0))
+follow_players :: fn state do
+    gfx.reset_camera()
+
+    center :: (state.player_a.pos + state.player_b.pos) * (-0.5, -0.5)
+    half_screen :: (love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
+    gfx.move_camera' center + half_screen
+end
+
+ground :: [
+    ((0.0, 0.0), (100.0, 20.0)),
+    ((0.0, 20.0), (600.0, 20.0)),
+    ((0.0, 20.0), (600.0, 20.0)),
+    ((300.0, 10.0), (100.0, 40.0)),
+    ((-300.0, 10.0), (100.0, 40.0)),
+
+    ((-370.0, -180.0), (40.0, 400.0)),
+    ((370.0, -180.0), (40.0, 400.0)),
+]
+
+platform :: [
+    ((150.0, -30.0), (100.0, 10.0)),
+    ((-150.0, -30.0), (100.0, 10.0)),
+]
+
 
 collision_with_player :: fn player, object do
     dim :: collision.box_vs_box(player.pos, player_size, object[0], object[1])
     if dim[0] != 0.0 or dim[1] != 0.0 do
+        player.pos -= dim
+
+        dv :: if dim[0] != 0.0 do
+            (player.vel[0], 0.0)
+        elif dim[1] != 0.0 do
+            (0.0, player.vel[1])
+        else do
+            (0.0, 0.0)
+        end
+        player.vel -= dv
+
+        if dim[1] > 0 do
+            player.grounded = true
+        end
+    end
+end
+
+collision_with_player_platform :: fn player, object do
+    dim :: collision.box_vs_box(player.pos, player_size, object[0], object[1])
+    if dim[0] == 0.0 and dim[1] > 0.0 and player.vel[1] >= 0.0 do
         player.pos -= dim
 
         dv :: if dim[0] != 0.0 do
@@ -211,17 +318,26 @@ collision_with_player :: fn player, object do
     end
 end
 
-draw_object :: fn object do
-    gfx.drawRectCentered' gfx.rgb(1.0, 1.0, 1.0), object[0], object[1]
+
+draw_object :: fn object, color do
+    gfx.drawRectCentered' color, object[0], object[1]
 end
 
 draw :: fn state: State do
     case state.current_state do
         Playing ->
+            follow_players' state
+
             draw_player(state.player_a)
             draw_player(state.player_b)
 
-            draw_object(ground)
+            ground -> for_each' fn g do
+                draw_object(g, gfx.rgba(1.0, 1.0, 1.0, 1.0))
+            end
+
+            platform -> for_each' fn g do
+                draw_object(g, gfx.rgba(1.0, 1.0, 1.0, 0.5))
+            end
         end
         Menu ->
         end

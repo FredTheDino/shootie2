@@ -15,10 +15,10 @@ clearShader :: fn do
 end
 
 // NOTE(ed): Might be nice to convert HSL to RGB?
-rgb :: fn r, g, b -> Color
+rgb :: pu r, g, b -> Color
     Color { red: r, green: g, blue: b, alpha: 1. }
 end
-rgba :: fn r, g, b, a -> Color
+rgba :: pu r, g, b, a -> Color
     Color { red: r, green: g, blue: b, alpha: a }
 end
 stableRandomColor :: fn i: float -> Color
@@ -338,4 +338,16 @@ newParticles :: fn image: Image ->
             x' particles, pos[0], pos[1]
         end,
     }
+end
+
+reset_camera :: fn do
+    love.graphics.origin'
+end
+
+move_camera :: fn pos: (float, float) do
+    love.graphics.translate' pos[0], pos[1]
+end
+
+zoom_camera :: fn scale: float do
+    love.graphics.scale' scale, scale
 end

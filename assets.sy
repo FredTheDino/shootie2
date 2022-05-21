@@ -1,3 +1,4 @@
 use gfx
 
-triangle :: gfx.newImage' "res/triangle.png"
+banana :: gfx.newImage' "res/banana.png"
+
