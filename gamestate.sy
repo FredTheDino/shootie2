@@ -247,7 +247,7 @@ update_camera :: fn given, delta, a, b -> Camera
 end
 
 push_camera :: fn camera do
-    gfx.reset_camera()
+    gfx.rest_camera()
     gfx.move_camera' camera.pos
 end
 
