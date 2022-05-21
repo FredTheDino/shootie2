@@ -96,7 +96,7 @@ explosion_from_bullet :: fn bullet ->
 end
 
 explosion_radius :: pu explosion ->
-    100.0 / (1.0 + explosion.lifetime)
+    max(0.0, 70.0 / (1.0 + explosion.lifetime) - 20.0)
 end
 
 inside_explosion_radius :: pu explosion, pos ->
@@ -108,7 +108,14 @@ update_explosion :: fn explosion, state, delta do
 
     if inside_explosion_radius(explosion, state.player_a.pos) do
         state.player_a.killed = state.frame
+    elif state.player_a.killed == -1 do
+        p :: state.player_a.pos
+        d :: math.distance(p, explosion.pos) - explosion_radius(explosion)
+        f :: 100.0 / (d)
+        dir :: math.normalize(p - explosion.pos)
+        state.player_a.vel += dir * (f, f)
     end
+
     if inside_explosion_radius(explosion, state.player_b.pos) do
         state.player_b.killed = state.frame
     end
@@ -418,8 +425,6 @@ update :: fn state: State, delta: float, gamepads -> State
                 state.player_a.bullets -> list.for_each' check_bullet_collison
                 state.player_b.bullets -> list.for_each' check_bullet_collison
 
-
-
                 chain' state.player_a.bullets, state.player_b.bullets, fn a do
                     chain' state.player_a.bullets, state.player_b.bullets, fn b do
                         if (0.0, 0.0) != collision.box_vs_box( b.pos, bullet_hitbox_size
@@ -548,8 +553,6 @@ draw :: fn state: State do
             draw_player(state.player_a)
             draw_player(state.player_b)
 
-            state.explosions -> list.for_each' draw_explosion
-
             ground -> for_each' fn g do
                 draw_object(g, gfx.rgba(1.0, 1.0, 1.0, 1.0))
             end
@@ -557,6 +560,8 @@ draw :: fn state: State do
             platform -> for_each' fn g do
                 draw_object(g, gfx.rgba(1.0, 1.0, 1.0, 0.5))
             end
+
+            state.explosions -> list.for_each' draw_explosion
         end
         Menu ->
         end
