@@ -137,6 +137,7 @@ isKeyDown :: fn key ->
     love.keyboard.isScancodeDown' keyToStr(key)
 end
 
+// Mouse
 MouseButton :: enum Left, Right, Middle end
 
 mouseButtonToInt :: fn m ->

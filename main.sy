@@ -3,27 +3,78 @@ use gfx
 use input
 use sfx
 use gamestate
+use unsafe
+
+Gamepad :: blob {
+    move: float,
+    jump: bool,
+    shoot: bool,
+}
+
+new_gamepad :: fn ->
+    Gamepad {
+        move: 0.0,
+        jump: false,
+        shoot: false,
+    }
+end
 
 start :: fn do
-    r := 0.
-
+    gamepads : dict.Dict(int, Gamepad) = dict.new()
     gs := gamestate.new()
-    updates := []
-    updates -> list.push' fn delta do
-        gs = gamestate.update' gs, delta
-    end
 
     love.update = fn delta do
-        updates -> for_each' fn u: fn * -> do u(delta) end
+        gs = gamestate.update' gs, delta, gamepads
     end
 
     love.draw = fn do
         gamestate.draw' gs
     end
 
-    love.keypressed = fn key, scancode, repeat do
+    // Input stuff - please ignore
+    map_gamepad :: fn gp, f: (fn Gamepad -> Gamepad) do
+        xx : fn * -> int : unsafe.unsafe_force' gp.getID
+        id :: xx' gp
+        given :: f(maybe.orDefault(dict.get(gamepads, id), new_gamepad()))
+        dict.update(gamepads, id, given)
     end
 
-    love.keyreleased = fn key, scancode do
+    love.gamepadaxis = fn gp, axis_name, value do
+        if axis_name != "leftx" do ret end
+
+        map_gamepad' gp, fn pad ->
+            pad.move = value
+            pad
+        end
+    end
+
+    love.gamepadpressed = fn gp, button do
+        map_gamepad' gp, fn pad ->
+            if button == "a" or button == "b" do
+                pad.jump = true
+            elif button == "leftshoulder" or button == "rightshoulder" do
+                pad.shoot = true
+            elif button == "dpleft" do
+                pad.move = -1.0
+            elif button == "dpright" do
+                pad.move = 1.0
+            end
+            pad
+        end
+    end
+
+    love.gamepadreleased = fn gp, button do
+        map_gamepad' gp, fn pad ->
+            if button == "a" or button == "b" do
+                pad.jump = false
+            elif button == "leftshoulder" or button == "rightshoulder" do
+                pad.shoot = false
+            elif button == "dpleft" and pad.move < 0.0 do
+                pad.move = 0.0
+            elif button == "dpright" and pad.move > 0.0 do
+                pad.move = 0.0
+            end
+            pad
+        end
     end
 end

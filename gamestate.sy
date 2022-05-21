@@ -3,6 +3,7 @@ use assets
 use gfx
 use collision
 from love use love
+from main use new_gamepad
 
 bool_to_int :: pu x: bool -> float
     if x do
@@ -123,25 +124,26 @@ new_player :: pu id: int ->
     }
 end
 
-read_input :: fn inp, left, right, jump, trigger, grounded, num_bullets, frame do
-    inp.move = (
+read_input :: fn inp, left, right, jump, trigger, grounded, num_bullets, gamepad, frame do
+    inp.move = math.clamp(
         bool_to_int(input.isKeyDown(right))
         - bool_to_int(input.isKeyDown(left))
+        + gamepad.move,
+        -1.0, 1.0
     )
 
-    if input.isKeyDown(jump) and is_up(inp.jump) and grounded do
+    if ((input.isKeyDown(jump) or gamepad.jump) and is_up(inp.jump)) and grounded do
         inp.jump = ButtonState.Down frame
-    end
-    if not input.isKeyDown(jump) and not is_up(inp.jump) do
+    elif not (input.isKeyDown(jump) or gamepad.jump) and not is_up(inp.jump) do
         inp.jump = ButtonState.Up frame
     end
 
     if num_bullets < 3 do
-        if not input.isKeyDown(trigger) and not is_up(inp.trigger) do
+        if (not (input.isKeyDown(trigger) or gamepad.shoot) and not is_up(inp.trigger)) do
             inp.shoot = frame - get_frame(inp.trigger)
             inp.trigger = ButtonState.Up frame
         end
-        if input.isKeyDown(trigger) and is_up(inp.trigger) do
+        if ((input.isKeyDown(trigger) or gamepad.shoot) and is_up(inp.trigger)) do
             inp.trigger = ButtonState.Down frame
         end
     end
@@ -247,7 +249,7 @@ update_camera :: fn given, delta, a, b -> Camera
 end
 
 push_camera :: fn camera do
-    gfx.rest_camera()
+    gfx.reset_camera()
     gfx.move_camera' camera.pos
 end
 
@@ -293,7 +295,7 @@ find_furthest_from :: pu points, a -> (float, float)
     point[1]
 end
 
-update :: fn state: State, delta: float -> State
+update :: fn state: State, delta: float, gamepads -> State
     case state.current_state do
         Playing ->
             read_input( state.player_a.input
@@ -301,6 +303,7 @@ update :: fn state: State, delta: float -> State
                       , input.Key.W, input.Key.S
                       , state.player_a.grounded
                       , list.len(state.player_a.bullets)
+                      , dict.get(gamepads, state.player_a.id) -> maybe.orDefault(new_gamepad())
                       , state.frame )
 
             read_input( state.player_b.input
@@ -308,6 +311,7 @@ update :: fn state: State, delta: float -> State
                       , input.Key.Up, input.Key.Down
                       , state.player_b.grounded
                       , list.len(state.player_a.bullets)
+                      , dict.get(gamepads, state.player_b.id) -> maybe.orDefault(new_gamepad())
                       , state.frame )
 
             if not state.player_a.alive do
