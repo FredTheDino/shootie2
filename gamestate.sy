@@ -146,11 +146,6 @@ read_input :: fn inp, left, right, jump, trigger, grounded, num_bullets, frame d
 end
 
 update_player :: fn player, aim_dir, frame, delta do
-    player.bullets -> for_each' fn bullet do
-        update_bullet' bullet, delta
-    end
-
-    if not player.alive do ret end
 
     jump_force :: 400.0
     hover_force :: 1200.0
@@ -186,6 +181,10 @@ update_player :: fn player, aim_dir, frame, delta do
             }
         )
     end
+    player.bullets -> for_each' fn bullet do
+        update_bullet' bullet, delta
+    end
+
 
     player.pos += player.vel * (delta, delta)
 
@@ -252,6 +251,37 @@ update :: fn state: State, delta: float -> State
                       , state.player_b.grounded
                       , list.len(state.player_a.bullets)
                       , state.frame )
+
+            other_player_pos :: state.player_b.pos
+            if not state.player_a.alive do
+                spawn_pos :: spawns -> list.fold' (0.0, (0.0, 0.0)), pu pos, out ->
+                    distance :: math.distance(pos, other_player_pos)
+                    if distance > out[0] do
+                        (distance, pos)
+                    else
+                        out
+                    end
+                end
+
+                state.player_a = new_player(state.player_a.id)
+                state.player_a.pos = spawn_pos[1]
+            end
+
+            other_player_pos :: state.player_a.pos
+            if not state.player_b.alive do
+                spawn_pos :: spawns -> list.fold' (0.0, (0.0, 0.0)), pu pos, out ->
+                    distance :: math.distance(pos, other_player_pos)
+                    if distance > out[0] do
+                        (distance, pos)
+                    else
+                        out
+                    end
+                end
+
+                state.player_b = new_player(state.player_b.id)
+                state.player_b.pos = spawn_pos[1]
+            end
+
 
             aim :: math.normalize(state.player_b.pos - state.player_a.pos)
             update_player(state.player_a, aim, state.frame, delta)
