@@ -86,7 +86,6 @@ end
 draw_bullet :: fn bullet do
     color :: id_to_color' bullet.owner
     assets.banana.drawTintedCentered(color, bullet.pos, bullet.lifetime * 10.0, (0.1, 0.1))
-    gfx.drawRectCenteredOutline(color, bullet.pos, bullet_hitbox_size)
 end
 
 explosion_from_bullet :: fn bullet ->
