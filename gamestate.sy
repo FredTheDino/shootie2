@@ -292,6 +292,7 @@ end
 
 Camera :: blob {
     pos: (float, float),
+    scale: float,
     shake_strength: float,
 }
 
@@ -299,6 +300,7 @@ new_camera :: fn a, b -> Camera
     camera :: Camera {
         pos: (0.0, 0.0),
         shake_strength: 0.0,
+        scale: 0.0,
     }
     update_camera' camera, 1.0, a, b
 end
@@ -312,18 +314,24 @@ lerp_v2 :: pu f, a: (float, float), b: (float, float) -> (float, float)
 end
 
 update_camera :: fn given, delta, a, b -> Camera
-    half_screen :: (love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
     center :: (a.pos + b.pos) * (-0.5, -0.5)
-    target :: center + half_screen
+    target_pos :: center * (1.0, 0.0) + (0.0, 100.0)
+
+    target_scale :: math.clamp(0.4 * as_float(love.graphics.getWidth()) / (abs(a.pos[0] - b.pos[0]) + 20.0), 1.0, 2.0)
 
     Camera {
-        pos: lerp_v2(delta, given.pos, center * (1.0, 0.0) + half_screen + (0.0, 100.0)),
+        pos: lerp_v2(delta, lerp_v2(delta, given.pos, target_pos), target_pos),
+        scale: lerp(delta, lerp(delta, given.scale, target_scale), target_scale),
         shake_strength: min(5.0, lerp(delta, given.shake_strength, 0.0)),
     }
 end
 
 push_camera :: fn camera do
     gfx.reset_camera()
+
+    half_screen :: (love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
+    gfx.move_camera' half_screen
+    gfx.zoom_camera' camera.scale
     gfx.move_camera' camera.pos
 
     sample :: fn -> math.random() * (1.0 - 0.5) * camera.shake_strength * camera.shake_strength end
