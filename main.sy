@@ -41,8 +41,8 @@ start :: fn do
 
     love.gamepadaxis = fn gp, axis_name, value do
         if axis_name != "leftx" do ret end
-        value :: if abs(value) < 0.02 do
-            0.0
+        value :: if abs(value) < 0.10 do
+            ret
         else
             value
         end
@@ -74,9 +74,9 @@ start :: fn do
                 pad.jump = false
             elif button == "leftshoulder" or button == "rightshoulder" do
                 pad.shoot = false
-            elif button == "dpleft" and pad.move < 0.0 do
+            elif button == "dpleft" and pad.move <= 0.001 do
                 pad.move = 0.0
-            elif button == "dpright" and pad.move > 0.0 do
+            elif button == "dpright" and pad.move >= 0.001 do
                 pad.move = 0.0
             end
             pad

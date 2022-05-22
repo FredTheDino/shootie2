@@ -44,6 +44,11 @@ end
 
 ready :: sfx.newSound' "res/ready.wav", false, sfx.SoundType.Static
 
+random_wins :: fn do
+    win.playp((1.4, 0.0), (1.0, 0.0))
+end
+win :: sfx.newSound' "res/win_toots.wav", false, sfx.SoundType.Static
+
 random_shoot :: fn strength do
     s :: list.random_choice(shoot) -> maybe.orDefault(unsafe_force(1))
     s.playp((0.8 + strength * 0.2, 0.1), (1.0 + strength * 0.2, 0.01))

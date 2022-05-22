@@ -7,7 +7,7 @@ from main use new_gamepad
 use particles
 use unsafe
 
-win_score :: 10
+win_score :: 1
 
 bool_to_int :: pu x: bool -> float
     if x do
@@ -462,10 +462,12 @@ update :: fn state: State, delta: float, gamepads -> State
                     if state.score[0] >= win_score do
                         state.current_state = GameState.Victory
                         state.victor = 0
+                        assets.random_wins()
                     end
                     if state.score[1] >= win_score do
                         state.current_state = GameState.Victory
                         state.victor = 1
+                        assets.random_wins()
                     end
                 end
 
