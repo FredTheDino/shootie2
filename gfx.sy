@@ -261,12 +261,16 @@ Particles :: blob {
     setEmissionRate: fn int -> void,
     setLinearAcceleration: fn (float, float), (float, float) -> void,
     setLinearDamping: fn float, float -> void,
+    setEmissionArea: fn str, (float, float) -> void,
+
     // set EmitterPosition
     setPosition: fn (float, float) -> void,
     setDirection: fn float -> void,
     setSizes: fn float, float -> void,
+    setSizeVariation: fn float -> void,
     setSpeed: fn float, float -> void,
     setSpread: fn float -> void,
+    setRotation: fn float, float -> void,
 
     setColors: fn Color, Color -> void,
 
@@ -306,6 +310,9 @@ newParticles :: fn image: Image ->
         setLinearDamping: fn lo, hi do
             particles.setLinearDamping' particles, lo, hi
         end,
+        setEmissionArea: fn dist, delta do
+            particles.setEmissionArea' particles, dist, delta[0], delta[1]
+        end,
         setPosition: fn pos do
             particles.setPosition' particles, pos[0], pos[1]
         end,
@@ -314,6 +321,12 @@ newParticles :: fn image: Image ->
         end,
         setSizes: fn lo, hi do
             particles.setSizes' particles, lo, hi
+        end,
+        setRotation: fn lo, hi do
+            particles.setRotation' particles, lo, hi
+        end,
+        setSizeVariation: fn var do
+            particles.setSizeVariation' particles, var
         end,
         setSpeed: fn lo, hi do
             particles.setSpeed' particles, lo, hi

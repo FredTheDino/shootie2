@@ -1,4 +1,5 @@
 use gfx
 
 banana :: gfx.newImage' "res/banana.png"
+square :: gfx.newImage' "res/particle.png"
 

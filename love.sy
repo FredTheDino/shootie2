@@ -12,12 +12,15 @@ ParticleSystem :: blob {
     setEmissionRate: fn *, int -> void,
     setLinearAcceleration: fn *, float, float, float, float -> void,
     setLinearDamping: fn *, float, float -> void,
+    setEmissionArea: fn *, str, float, float -> void,
 
     setPosition: fn *, float, float -> void,
     setDirection: fn *, float -> void,
     setSizes: fn *, float, float -> void,
+    setSizeVariation: fn *, float -> void,
     setSpeed: fn *, float, float -> void,
     setSpread: fn *, float -> void,
+    setRotation: fn *, float, float -> void,
 
     setColors: fn *, float, float, float, float, float, float, float, float -> void, // yikes
 

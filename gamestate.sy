@@ -4,6 +4,8 @@ use gfx
 use collision
 from love use love
 from main use new_gamepad
+use particles
+use unsafe
 
 bool_to_int :: pu x: bool -> float
     if x do
@@ -270,7 +272,7 @@ get_scale_for :: pu y_vel -> (float, float)
     new_w :: player_size[0] * y
     new_h :: (player_size[0] * player_size[1]) / new_w
 
-    dbg' (new_w, new_h)
+    (new_w, new_h)
 end
 
 draw_player :: fn player, frame do
@@ -331,6 +333,8 @@ State :: blob {
 
     player_a: Player,
     player_b: Player,
+
+    background_particles: gfx.Particles
 }
 
 new :: fn ->
@@ -345,6 +349,8 @@ new :: fn ->
 
         player_a: player_a,
         player_b: player_b,
+
+        background_particles: particles.background_particles(),
     }
 end
 
@@ -366,6 +372,7 @@ chain :: fn a: [*A], b: [*A], f: fn *A -> void do
 end
 
 update :: fn state: State, delta: float, gamepads -> State
+    gfx.updateParticles(state.background_particles, delta)
     case state.current_state do
         Playing ->
             all_alive :: state.player_a.killed == -1 and state.player_b.killed == -1
@@ -561,6 +568,9 @@ draw_object :: fn object, color do
 end
 
 draw :: fn state: State do
+    f : fn gfx.Color, (float, float) -> void : unsafe.unsafe_force' state.background_particles.drawAt
+    f(gfx.rgb(1.0, 1.0, 1.0), state.camera.pos * (0.2, 0.2))
+
     case state.current_state do
         Playing ->
             push_camera' state.camera
