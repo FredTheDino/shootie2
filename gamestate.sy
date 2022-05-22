@@ -107,7 +107,7 @@ end
 update_explosion :: fn explosion, state, delta do
     explosion.lifetime += delta
 
-    if inside_explosion_radius(explosion, state.player_a.pos) do
+    if inside_explosion_radius(explosion, state.player_a.pos) and state.player_a.killed == -1 do
         state.player_a.killed = state.frame
         assets.random_end_of_turns()
     elif state.player_a.killed == -1 do
@@ -118,7 +118,7 @@ update_explosion :: fn explosion, state, delta do
         state.player_a.vel += dir * (f, f)
     end
 
-    if inside_explosion_radius(explosion, state.player_b.pos) do
+    if inside_explosion_radius(explosion, state.player_b.pos) and state.player_b.killed == -1 do
         state.player_b.killed = state.frame
         assets.random_end_of_turns()
     elif state.player_b.killed == -1 do
@@ -232,7 +232,9 @@ update_player :: fn player, aim_dir, frame, delta do
     if released(player.input.trigger, frame) do
         player.fired = frame
         offset :: 25.0
-        vel :: 5.0 + min(as_float(player.input.shoot) * 0.1, 5.0)
+        strength :: min(as_float(player.input.shoot) * 0.1, 5.0)
+        vel :: 5.0 + strength
+        assets.random_shoot(strength / 5.0)
         player.bullets -> list.push(
             Bullet {
                 owner: player.id,
