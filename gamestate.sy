@@ -350,6 +350,7 @@ State :: blob {
 
     background_particles: gfx.Particles,
 
+    score: (int, int),
     menu_trigger: MenuTrigger,
 }
 
@@ -365,6 +366,8 @@ new :: fn ->
 
         player_a: player_a,
         player_b: player_b,
+
+        score: (0, 0),
 
         background_particles: particles.background_particles(),
         menu_trigger: MenuTrigger {
@@ -404,6 +407,14 @@ update :: fn state: State, delta: float, gamepads -> State
                 state.player_b.bullets = []
 
                 state.explosions = []
+
+                if dbg(abs(state.player_a.killed - state.player_b.killed)) > 30 do
+                    if state.player_a.killed < state.player_b.killed do
+                        state.score += (1, 0)
+                    else do
+                        state.score += (0, 1)
+                    end
+                end
 
                 state.player_a = new_player(state.player_a.id)
                 state.player_a.pos = list.random_choice(spawns) -> maybe.orDefault((0.0, 0.0))
@@ -517,6 +528,7 @@ update :: fn state: State, delta: float, gamepads -> State
                 and state.menu_trigger.a_r1
                 and state.menu_trigger.b_r1) do
                 state.current_state = GameState.Playing
+                state.score = (0, 0)
             end
         end
     end
@@ -608,11 +620,20 @@ draw_button :: fn text, pos, color do
 end
 
 draw :: fn state: State do
+    screenDim :: gfx.screenSizef()
+
     f : fn gfx.Color, (float, float) -> void : unsafe.unsafe_force' state.background_particles.drawAt
     f(gfx.rgb(1.0, 1.0, 1.0), state.camera.pos * (0.2, 0.2))
 
     case state.current_state do
         Playing ->
+            ww :: 80.0
+            left_score_pos :: (screenDim[0] * 0.15 - 80.0, 25.0)
+            assets.font.drawTextF(id_to_color(0), as_str(state.score[0]), left_score_pos, gfx.Alignment.Center, ww)
+
+            right_score_pos :: (screenDim[0] * 0.85, 25.0)
+            assets.font.drawTextF(id_to_color(1), as_str(state.score[1]), right_score_pos, gfx.Alignment.Center, ww)
+
             push_camera' state.camera
 
             draw_player(state.player_a, state.frame)
@@ -629,7 +650,6 @@ draw :: fn state: State do
             state.explosions -> list.for_each' draw_explosion
         end
         Menu ->
-            screenDim :: gfx.screenSizef()
             assets.font.drawTextF(gfx.rgb(1.0, 1.0, 1.0), "Shooty 2", (0.0, screenDim[1] / 2.0 - 75.0), gfx.Alignment.Center, screenDim[0])
             assets.fontSmall.drawTextF(gfx.rgb(1.0, 1.0, 0.0), "return of the banana", (0.0, screenDim[1] / 2.0 + 25.0), gfx.Alignment.Center, screenDim[0])
 
@@ -641,7 +661,6 @@ draw :: fn state: State do
                 end
             end
 
-            state.menu_trigger.a_r1
             draw_button("R1", (screenDim[0] * 0.25, screenDim[1] / 2.0 - 20.0 + 100.0), active_color' state.menu_trigger.a_r1, 0)
             draw_button("X",  (screenDim[0] * 0.25, screenDim[1] / 2.0 + 20.0 + 100.0), active_color' state.menu_trigger.a_x, 0)
             draw_button("R1", (screenDim[0] * 0.75, screenDim[1] / 2.0 - 20.0 + 100.0), active_color' state.menu_trigger.b_r1, 1)
