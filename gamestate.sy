@@ -7,7 +7,7 @@ from main use new_gamepad
 use particles
 use unsafe
 
-win_score :: 1
+win_score :: 10
 
 bool_to_int :: pu x: bool -> float
     if x do
@@ -172,7 +172,7 @@ new_player :: pu id: int ->
         input: PlayerInput {
             move: 0.0,
             jump: ButtonState.Down 0,
-            trigger: ButtonState.Down 0,
+            trigger: ButtonState.Up 0,
             shoot: 0,
         }
     }
@@ -322,7 +322,7 @@ update_camera :: fn given, delta, a, b -> Camera
     Camera {
         pos: lerp_v2(delta, lerp_v2(delta, given.pos, target_pos), target_pos),
         scale: lerp(delta, lerp(delta, given.scale, target_scale), target_scale),
-        shake_strength: min(5.0, lerp(delta, given.shake_strength, 0.0)),
+        shake_strength: min(5.0, lerp(delta, lerp(delta, given.shake_strength, 0.0), 0.0)),
     }
 end
 
@@ -379,7 +379,7 @@ new :: fn ->
     player_a :: new_player(0)
     player_b :: new_player(1)
     State {
-        current_state: GameState.Menu,
+        current_state: GameState.Victory,
         frame: 0,
 
         camera: new_camera(player_a, player_b),
@@ -388,7 +388,7 @@ new :: fn ->
         player_a: player_a,
         player_b: player_b,
 
-        score: (0, 0),
+        score: (100, 0),
         victor: 0,
 
         background_particles: particles.background_particles(),
@@ -742,12 +742,12 @@ draw :: fn state: State do
             state.explosions -> list.for_each' draw_explosion
         end
         Victory ->
-            ww :: 80.0
-            left_score_pos :: (screenDim[0] * 0.15 + 80.0, screenDim[1] * 0.5)
-            assets.font.drawTextF(id_to_color(0), as_str(state.score[0]), left_score_pos, gfx.Alignment.Center, ww)
+            ww :: 200.0
+            left_score_pos :: (screenDim[0] * 0.25, screenDim[1] * 0.5)
+            assets.font.drawTextF(id_to_color(0), as_str(state.score[0]), left_score_pos - (ww / 2.0, 0.0), gfx.Alignment.Center, ww)
 
-            right_score_pos :: (screenDim[0] * 0.85 - 160.0, screenDim[1] * 0.5)
-            assets.font.drawTextF(id_to_color(1), as_str(state.score[1]), right_score_pos, gfx.Alignment.Center, ww)
+            right_score_pos :: (screenDim[0] * 0.75, screenDim[1] * 0.5)
+            assets.font.drawTextF(id_to_color(1), as_str(state.score[1]), right_score_pos - (ww / 2.0, 0.0), gfx.Alignment.Center, ww)
 
             winner_text :: if state.victor == 0 do
                 "Red wins!"
