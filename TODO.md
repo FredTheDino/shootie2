@@ -1,10 +1,10 @@
 TODO:
- - [ ] Sound effects (Edvard)
+ - [x] Sound effects (Edvard)
  - [x] Squash and stretch
 
  - [ ] Explosion particles
- - [ ] Ladning particles
- - [ ] Jumping particles
+ - [x] Ladning particles
+ - [x] Jumping particles
  - [ ] Banana trail particles
  - [ ] Death particles
  - [x] Background particles

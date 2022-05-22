@@ -35,3 +35,21 @@ splash_particles :: fn -> gfx.Particles
 
     ps
 end
+
+jump_particles :: fn -> gfx.Particles
+    ps :: gfx.newParticles' assets.square
+    ps.setParticleLifetime(0.1, 0.5)
+    ps.setEmissionRate(0)
+    ps.setEmissionArea("uniform", (10.0, 0.0))
+    ps.setSizeVariation(1.0)
+    ps.setSizes(0.1, 0.2)
+    ps.setRotation(0.0, math.pi / 4)
+    ps.setDirection(-math.pi / 2)
+    ps.setSpeed(1.0, 100.0)
+
+    a :: 0.9
+    //ps.setColors(gfx.rgba(0.3, 0.2, 0.2, a), gfx.rgba(0.3, 0.3, 0.3, 0.0))
+    ps.setColors(gfx.rgba(1.0, 1.0, 1.0, a), gfx.rgba(1.0, 1.0, 1.0, 0.0))
+
+    ps
+end

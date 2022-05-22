@@ -355,6 +355,7 @@ State :: blob {
 
     background_particles: gfx.Particles,
     splash_particles: gfx.Particles,
+    jump_particles: gfx.Particles,
 
     score: (int, int),
     menu_trigger: MenuTrigger,
@@ -377,6 +378,7 @@ new :: fn ->
 
         background_particles: particles.background_particles(),
         splash_particles: particles.splash_particles(),
+        jump_particles: particles.jump_particles(),
 
         menu_trigger: MenuTrigger {
             a_r1: true,
@@ -407,10 +409,13 @@ end
 
 update :: fn state: State, delta: float, gamepads -> State
 
-    u : fn (float, float), int -> void : unsafe.unsafe_force(state.splash_particles.emitAt)
+    emitSplash : fn (float, float), int -> void : unsafe.unsafe_force(state.splash_particles.emitAt)
+    emitJump : fn (float, float), int -> void : unsafe.unsafe_force(state.jump_particles.emitAt)
 
     gfx.updateParticles(state.background_particles, delta)
     gfx.updateParticles(state.splash_particles, delta)
+    gfx.updateParticles(state.jump_particles, delta)
+
     case state.current_state do
         Playing ->
             all_alive :: state.player_a.killed == -1 and state.player_b.killed == -1
@@ -467,6 +472,9 @@ update :: fn state: State, delta: float, gamepads -> State
 
             vel_a :: state.player_a.vel[1]
             vel_b :: state.player_b.vel[1]
+
+            jumps_a :: state.player_a.jumps
+            jumps_b :: state.player_b.jumps
 
             aim :: math.normalize(state.player_b.pos - state.player_a.pos)
             update_player(state.player_a, aim, state.frame, delta)
@@ -528,10 +536,17 @@ update :: fn state: State, delta: float, gamepads -> State
             end
 
             if state.player_a.vel[1] == 0.0 and vel_a > 0.0 do
-                u(state.player_a.pos + (0.0, player_size[1] / 2.0), 10)
+                emitSplash(state.player_a.pos + (0.0, player_size[1] / 2.0), 10)
             end
             if state.player_b.vel[1] == 0.0 and vel_b > 0.0 do
-                u(state.player_b.pos + (0.0, player_size[1] / 2.0), 10)
+                emitSplash(state.player_b.pos + (0.0, player_size[1] / 2.0), 10)
+            end
+
+            if state.player_a.jumps < jumps_a do
+                emitJump(state.player_a.pos + (0.0, player_size[1] / 2.0), 10)
+            end
+            if state.player_b.jumps < jumps_b do
+                emitJump(state.player_b.pos + (0.0, player_size[1] / 2.0), 10)
             end
 
             state.camera = update_camera(state.camera, delta, state.player_a, state.player_b)
@@ -649,6 +664,7 @@ draw :: fn state: State do
     f(gfx.rgb(1.0, 1.0, 1.0), state.camera.pos * (0.2, 0.2))
 
     draw_splash : fn gfx.Color -> void : unsafe.unsafe_force' state.splash_particles.draw
+    draw_jump : fn gfx.Color -> void : unsafe.unsafe_force' state.jump_particles.draw
 
     case state.current_state do
         Playing ->
@@ -665,6 +681,7 @@ draw :: fn state: State do
             draw_player(state.player_b, state.frame)
 
             draw_splash(gfx.rgb(1.0, 1.0, 1.0))
+            draw_jump(gfx.rgb(1.0, 1.0, 1.0))
 
             ground -> for_each' fn g do
                 draw_object(g, gfx.rgba(1.0, 1.0, 1.0, 1.0))
