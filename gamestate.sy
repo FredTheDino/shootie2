@@ -367,6 +367,8 @@ State :: blob {
     background_particles: gfx.Particles,
     splash_particles: gfx.Particles,
     jump_particles: gfx.Particles,
+    explosion_particles0: gfx.Particles,
+    explosion_particles1: gfx.Particles,
 
     score: (int, int),
     menu_trigger: MenuTrigger,
@@ -392,6 +394,8 @@ new :: fn ->
         background_particles: particles.background_particles(),
         splash_particles: particles.splash_particles(),
         jump_particles: particles.jump_particles(),
+        explosion_particles0: particles.explosion_particles0(),
+        explosion_particles1: particles.explosion_particles1(),
 
         menu_trigger: MenuTrigger {
             a_r1: true,
@@ -424,10 +428,21 @@ update :: fn state: State, delta: float, gamepads -> State
 
     emitSplash : fn (float, float), int -> void : unsafe.unsafe_force(state.splash_particles.emitAt)
     emitJump : fn (float, float), int -> void : unsafe.unsafe_force(state.jump_particles.emitAt)
+    emitExplosion0 : fn (float, float), int -> void : unsafe.unsafe_force(state.explosion_particles0.emitAt)
+    emitExplosion1 : fn (float, float), int -> void : unsafe.unsafe_force(state.explosion_particles1.emitAt)
+    emitColoredExplosion :: fn id, pos, amount do
+        if id == 0 do
+            emitExplosion0' pos, amount
+        else
+            emitExplosion1' pos, amount
+        end
+    end
 
     gfx.updateParticles(state.background_particles, delta)
     gfx.updateParticles(state.splash_particles, delta)
     gfx.updateParticles(state.jump_particles, delta)
+    gfx.updateParticles(state.explosion_particles0, delta)
+    gfx.updateParticles(state.explosion_particles1, delta)
 
     case state.current_state do
         Playing ->
@@ -537,6 +552,7 @@ update :: fn state: State, delta: float, gamepads -> State
                 add_explosion :: fn a do
                     if not a.alive do
                         list.push(state.explosions, explosion_from_bullet(a))
+                        emitColoredExplosion(a.owner, a.pos, 100)
                         state.camera.shake_strength += 2.0
                         assets.random_explosion()
                     end
@@ -693,6 +709,8 @@ draw :: fn state: State do
 
     draw_splash : fn gfx.Color -> void : unsafe.unsafe_force' state.splash_particles.draw
     draw_jump : fn gfx.Color -> void : unsafe.unsafe_force' state.jump_particles.draw
+    draw_explosionp0 : fn gfx.Color -> void : unsafe.unsafe_force' state.explosion_particles0.draw
+    draw_explosionp1 : fn gfx.Color -> void : unsafe.unsafe_force' state.explosion_particles1.draw
 
     case state.current_state do
         Playing ->
@@ -710,6 +728,8 @@ draw :: fn state: State do
 
             draw_splash(gfx.rgb(1.0, 1.0, 1.0))
             draw_jump(gfx.rgb(1.0, 1.0, 1.0))
+            draw_explosionp0(gfx.rgb(1.0, 1.0, 1.0))
+            draw_explosionp1(gfx.rgb(1.0, 1.0, 1.0))
 
             ground -> for_each' fn g do
                 draw_object(g, gfx.rgba(1.0, 1.0, 1.0, 1.0))
