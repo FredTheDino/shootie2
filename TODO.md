@@ -1,6 +1,6 @@
 TODO:
  - [ ] Sound effects
- - [ ] Squash and stretch
+ - [ ] Squash and stretch (Edvard)
 
  - [ ] Explosion particles
  - [ ] Ladning particles
