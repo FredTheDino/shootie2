@@ -16,3 +16,22 @@ background_particles :: fn -> gfx.Particles
     ps.emit(150)
     ps
 end
+
+splash_particles :: fn -> gfx.Particles
+    ps :: gfx.newParticles' assets.square
+    ps.setParticleLifetime(0.1, 0.3)
+    ps.setEmissionRate(0)
+    ps.setEmissionArea("uniform", (10.0, 0.0))
+    ps.setSizeVariation(1.0)
+    ps.setSizes(0.1, 0.2)
+    ps.setRotation(0.0, math.pi / 4)
+    ps.setDirection(-math.pi / 2)
+    ps.setSpeed(1.0, 100.0)
+    ps.setSpread(math.pi)
+
+    a :: 0.9
+    //ps.setColors(gfx.rgba(0.3, 0.2, 0.2, a), gfx.rgba(0.3, 0.3, 0.3, 0.0))
+    ps.setColors(gfx.rgba(1.0, 1.0, 1.0, a), gfx.rgba(1.0, 1.0, 1.0, 0.0))
+
+    ps
+end

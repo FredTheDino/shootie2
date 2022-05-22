@@ -352,6 +352,7 @@ State :: blob {
     player_b: Player,
 
     background_particles: gfx.Particles,
+    splash_particles: gfx.Particles,
 
     score: (int, int),
     menu_trigger: MenuTrigger,
@@ -373,6 +374,8 @@ new :: fn ->
         score: (0, 0),
 
         background_particles: particles.background_particles(),
+        splash_particles: particles.splash_particles(),
+
         menu_trigger: MenuTrigger {
             a_r1: true,
             a_x: true,
@@ -401,7 +404,11 @@ chain :: fn a: [*A], b: [*A], f: fn *A -> void do
 end
 
 update :: fn state: State, delta: float, gamepads -> State
+
+    u : fn (float, float), int -> void : unsafe.unsafe_force(state.splash_particles.emitAt)
+
     gfx.updateParticles(state.background_particles, delta)
+    gfx.updateParticles(state.splash_particles, delta)
     case state.current_state do
         Playing ->
             all_alive :: state.player_a.killed == -1 and state.player_b.killed == -1
@@ -456,11 +463,13 @@ update :: fn state: State, delta: float, gamepads -> State
                           , state.frame )
             end
 
+            vel_a :: state.player_a.vel[1]
+            vel_b :: state.player_b.vel[1]
+
             aim :: math.normalize(state.player_b.pos - state.player_a.pos)
             update_player(state.player_a, aim, state.frame, delta)
             aim :: math.normalize(state.player_a.pos - state.player_b.pos)
             update_player(state.player_b, aim, state.frame, delta)
-
 
             ground -> for_each' fn g do
                 collision_with_player(state.player_a, g)
@@ -514,6 +523,13 @@ update :: fn state: State, delta: float, gamepads -> State
             platform -> for_each' fn g do
                 collision_with_player_platform(state.player_a, g)
                 collision_with_player_platform(state.player_b, g)
+            end
+
+            if state.player_a.vel[1] == 0.0 and vel_a > 0.0 do
+                u(state.player_a.pos + (0.0, player_size[1] / 2.0), 10)
+            end
+            if state.player_b.vel[1] == 0.0 and vel_b > 0.0 do
+                u(state.player_b.pos + (0.0, player_size[1] / 2.0), 10)
             end
 
             state.camera = update_camera(state.camera, delta, state.player_a, state.player_b)
@@ -630,6 +646,8 @@ draw :: fn state: State do
     f : fn gfx.Color, (float, float) -> void : unsafe.unsafe_force' state.background_particles.drawAt
     f(gfx.rgb(1.0, 1.0, 1.0), state.camera.pos * (0.2, 0.2))
 
+    draw_splash : fn gfx.Color -> void : unsafe.unsafe_force' state.splash_particles.draw
+
     case state.current_state do
         Playing ->
             ww :: 80.0
@@ -643,6 +661,8 @@ draw :: fn state: State do
 
             draw_player(state.player_a, state.frame)
             draw_player(state.player_b, state.frame)
+
+            draw_splash(gfx.rgb(1.0, 1.0, 1.0))
 
             ground -> for_each' fn g do
                 draw_object(g, gfx.rgba(1.0, 1.0, 1.0, 1.0))
