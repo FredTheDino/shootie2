@@ -379,7 +379,7 @@ new :: fn ->
     player_a :: new_player(0)
     player_b :: new_player(1)
     State {
-        current_state: GameState.Victory,
+        current_state: GameState.Menu,
         frame: 0,
 
         camera: new_camera(player_a, player_b),
