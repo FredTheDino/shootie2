@@ -1,4 +1,6 @@
 use gfx
+from love use love
 
 banana :: gfx.newImage' "res/banana.png"
-
+font :: gfx.createFont' love.graphics.newFont("res/Ubuntu-Title.ttf", 100)
+fontSmall :: gfx.createFont' love.graphics.newFont("res/Ubuntu-Title.ttf", 25)

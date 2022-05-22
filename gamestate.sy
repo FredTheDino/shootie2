@@ -337,7 +337,7 @@ new :: fn ->
     player_a :: new_player(0)
     player_b :: new_player(1)
     State {
-        current_state: GameState.Playing,
+        current_state: GameState.Menu,
         frame: 0,
 
         camera: new_camera(player_a, player_b),
@@ -579,6 +579,9 @@ draw :: fn state: State do
             state.explosions -> list.for_each' draw_explosion
         end
         Menu ->
+            screenDim :: gfx.screenSizef()
+            assets.font.drawTextF(gfx.rgb(1.0, 1.0, 1.0), "Shooty 2", (0.0, screenDim[1] / 2.0 - 75.0), gfx.Alignment.Center, screenDim[0])
+            assets.fontSmall.drawTextF(gfx.rgb(1.0, 1.0, 0.0), "return of the banana", (0.0, screenDim[1] / 2.0 + 25.0), gfx.Alignment.Center, screenDim[0])
         end
     end
 end
