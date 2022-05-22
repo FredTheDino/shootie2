@@ -1,6 +1,16 @@
 TODO:
- - Triangles
- - Draw triangles
- - Do the flipping
- - Add some numbers
- - Add some effects
+ - [ ] Sound effects
+ - [ ] Squash and stretch
+
+ - [ ] Explosion particles
+ - [ ] Ladning particles
+ - [ ] Jumping particles
+ - [ ] Banana trail particles
+ - [ ] Background particles
+
+ - [ ] Music
+
+ - [ ] Sick ass title screen
+ - [ ] Mini tutorial
+ - [ ] Camera shake
+ - [ ] (Fishing minigame)
