@@ -603,6 +603,11 @@ draw_object :: fn object, color do
     gfx.drawRectCentered' color, object[0], object[1]
 end
 
+draw_button :: fn text, pos, color do
+    gfx.drawRectCenteredOutline(color, pos, (30.0, 30.0))
+    assets.fontSmall.drawTextF(color, text, pos + (-100.0, -12.5), gfx.Alignment.Center, 200.0)
+end
+
 draw :: fn state: State do
     f : fn gfx.Color, (float, float) -> void : unsafe.unsafe_force' state.background_particles.drawAt
     f(gfx.rgb(1.0, 1.0, 1.0), state.camera.pos * (0.2, 0.2))
@@ -628,6 +633,20 @@ draw :: fn state: State do
             screenDim :: gfx.screenSizef()
             assets.font.drawTextF(gfx.rgb(1.0, 1.0, 1.0), "Shooty 2", (0.0, screenDim[1] / 2.0 - 75.0), gfx.Alignment.Center, screenDim[0])
             assets.fontSmall.drawTextF(gfx.rgb(1.0, 1.0, 0.0), "return of the banana", (0.0, screenDim[1] / 2.0 + 25.0), gfx.Alignment.Center, screenDim[0])
+
+            active_color :: fn b, id ->
+                if b do
+                    id_to_color(id)
+                else
+                    gfx.rgb(1.0, 1.0, 1.0)
+                end
+            end
+
+            state.menu_trigger.a_r1
+            draw_button("R1", (screenDim[0] * 0.25, screenDim[1] / 2.0 - 20.0 + 100.0), active_color' state.menu_trigger.a_r1, 0)
+            draw_button("X",  (screenDim[0] * 0.25, screenDim[1] / 2.0 + 20.0 + 100.0), active_color' state.menu_trigger.a_x, 0)
+            draw_button("R1", (screenDim[0] * 0.75, screenDim[1] / 2.0 - 20.0 + 100.0), active_color' state.menu_trigger.b_r1, 1)
+            draw_button("X",  (screenDim[0] * 0.75, screenDim[1] / 2.0 + 20.0 + 100.0), active_color' state.menu_trigger.b_x, 1)
         end
     end
 end
