@@ -14,6 +14,6 @@ TODO:
  - [ ] Mini tutorial
      - [x] What is down
      - [ ] Presenting it to the viewer (Erik)
- - [ ] Camera shake (Edvard)
+ - [x] Camera shake (Edvard)
  - [ ] (Fishing minigame)
  - [ ] Score
