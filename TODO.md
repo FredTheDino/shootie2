@@ -1,17 +1,19 @@
 TODO:
  - [ ] Sound effects
- - [x] Squash and stretch (Edvard)
+ - [x] Squash and stretch
 
  - [ ] Explosion particles
  - [ ] Ladning particles
  - [ ] Jumping particles
  - [ ] Banana trail particles
- - [ ] Background particles
+ - [x] Background particles
 
  - [ ] Music
 
- - [ ] Sick ass title screen
+ - [x] Sick ass title screen
  - [ ] Mini tutorial
- - [ ] Camera shake
+     - [x] What is down
+     - [ ] Presenting it to the viewer (Erik)
+ - [ ] Camera shake (Edvard)
  - [ ] (Fishing minigame)
  - [ ] Score
