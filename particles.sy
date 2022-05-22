@@ -5,7 +5,7 @@ background_particles :: fn -> gfx.Particles
     ps :: gfx.newParticles' assets.square
     ps.setParticleLifetime(100., 100.)
     ps.setEmissionRate(5)
-    ps.setEmissionArea("uniform", (800.0, 800.0))
+    ps.setEmissionArea("uniform", (1920.0, 1080.0))
     ps.setSizeVariation(1.0)
     ps.setSizes(1.0, 2.0)
     ps.setRotation(math.pi / 4, math.pi / 4)
