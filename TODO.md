@@ -11,9 +11,9 @@ TODO:
  - [ ] Music
 
  - [x] Sick ass title screen
- - [ ] Mini tutorial
+ - [x] Mini tutorial
      - [x] What is down
-     - [ ] Presenting it to the viewer (Erik)
+     - [x] Presenting it to the viewer (Erik)
  - [x] Camera shake (Edvard)
  - [ ] (Fishing minigame)
  - [ ] Score
