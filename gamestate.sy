@@ -264,10 +264,20 @@ id_to_color :: pu id ->
     end
 end
 
-draw_player :: fn player do
+get_scale_for :: pu y_vel -> (float, float)
+    y :: math.clamp(1.0 + y_vel / 400.0, 0.8, 1.2)
+
+    new_w :: player_size[0] * y
+    new_h :: (player_size[0] * player_size[1]) / new_w
+
+    dbg' (new_w, new_h)
+end
+
+draw_player :: fn player, frame do
     if player.killed == -1 do
         color :: id_to_color' player.id
-        gfx.drawRectCentered' color, player.pos, player_size
+        scale :: get_scale_for' player.vel[1]
+        gfx.drawRectCentered' color, player.pos, scale
     end
     player.bullets -> for_each' draw_bullet
 end
@@ -555,8 +565,8 @@ draw :: fn state: State do
         Playing ->
             push_camera' state.camera
 
-            draw_player(state.player_a)
-            draw_player(state.player_b)
+            draw_player(state.player_a, state.frame)
+            draw_player(state.player_b, state.frame)
 
             ground -> for_each' fn g do
                 draw_object(g, gfx.rgba(1.0, 1.0, 1.0, 1.0))
