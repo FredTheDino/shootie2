@@ -13,6 +13,6 @@ background_particles :: fn -> gfx.Particles
     a :: 0.9
     ps.setColors(gfx.rgba(0.3, 0.2, 0.2, a), gfx.rgba(0.3, 0.3, 0.3, 0.0))
 
-    ps.emit(100)
+    ps.emit(150)
     ps
 end
