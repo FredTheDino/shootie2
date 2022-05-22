@@ -118,6 +118,12 @@ update_explosion :: fn explosion, state, delta do
 
     if inside_explosion_radius(explosion, state.player_b.pos) do
         state.player_b.killed = state.frame
+    elif state.player_b.killed == -1 do
+        p :: state.player_b.pos
+        d :: math.distance(p, explosion.pos) - explosion_radius(explosion)
+        f :: 100.0 / (d)
+        dir :: math.normalize(p - explosion.pos)
+        state.player_b.vel += dir * (f, f)
     end
 end
 
@@ -137,7 +143,7 @@ Player :: blob {
     pos: (float, float),
     vel: (float, float),
     size: (float, float),
-    grounded: bool,
+    jumps: int,
     killed: int,
     fired: int,
 
@@ -152,7 +158,7 @@ new_player :: pu id: int ->
         pos: list.get(spawns, id) -> maybe.orDefault((0.0, 0.0)),
         vel: (0.0, 0.0),
         size: (1.0, 1.0),
-        grounded: true,
+        jumps: 0,
         killed: -1,
         fired: -1000,
 
@@ -170,7 +176,7 @@ end
 read_input :: fn player, left, right, jump, trigger, gamepad, frame do
     inp := player.input
     num_bullets :: list.len' player.bullets
-    grounded :: player.grounded
+    grounded :: player.jumps > 0
     fire_cooldown :: 10
 
     inp.move = math.clamp(
@@ -199,7 +205,7 @@ end
 
 update_player :: fn player, aim_dir, frame, delta do
 
-    jump_force :: 375.0
+    jump_force :: 350.0
     hover_force :: 1200.0
     move_force :: 2000.0
     gravity :: 2000.0
@@ -213,6 +219,7 @@ update_player :: fn player, aim_dir, frame, delta do
 
     if pressed(player.input.jump, frame) do
         player.vel = (player.vel[0], -jump_force)
+        player.jumps -= 1
     elif held(player.input.jump, frame, 20) do
         player.vel += (0.0, -hover_force * delta)
     end
@@ -401,8 +408,6 @@ update :: fn state: State, delta: float, gamepads -> State
             update_player(state.player_b, aim, state.frame, delta)
 
 
-            state.player_a.grounded = false
-            state.player_b.grounded = false
             ground -> for_each' fn g do
                 collision_with_player(state.player_a, g)
                 collision_with_player(state.player_b, g)
@@ -517,7 +522,7 @@ collision_with_player :: fn player, object do
         player.vel -= dv
 
         if dim[1] > 0 do
-            player.grounded = true
+            player.jumps = 2
         end
     end
 end
@@ -535,7 +540,7 @@ collision_with_player_platform :: fn player, object do
         player.vel -= dv
 
         if dim[1] > 0 do
-            player.grounded = true
+            player.jumps = 2
         end
     end
 end
