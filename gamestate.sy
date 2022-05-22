@@ -7,7 +7,7 @@ from main use new_gamepad
 use particles
 use unsafe
 
-win_score :: 1
+win_score :: 10
 
 bool_to_int :: pu x: bool -> float
     if x do
