@@ -16,4 +16,4 @@ TODO:
      - [x] Presenting it to the viewer (Erik)
  - [x] Camera shake (Edvard)
  - [ ] (Fishing minigame)
- - [ ] Score
+ - [x] Score
