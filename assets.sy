@@ -7,7 +7,7 @@ banana :: gfx.newImage' "res/banana.png"
 square :: gfx.newImage' "res/particle.png"
 
 font :: gfx.createFont' love.graphics.newFont("res/Ubuntu-Title.ttf", 100)
-fontSmall :: gfx.createFont' love.graphics.newFont("res/Ubuntu-Title.ttf", 25)
+fontSmall :: gfx.createFont' love.graphics.newFont("res/Ubuntu-Title.ttf", 35)
 
 random_jump :: fn do
     s :: list.random_choice(jumps) -> maybe.orDefault(unsafe_force(1))
