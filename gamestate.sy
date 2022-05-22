@@ -260,9 +260,9 @@ end
 
 id_to_color :: pu id ->
     if id == 0 do
-        gfx.rgba(1.0, 0.2, 0.2, 0.5)
+        gfx.rgba(1.0, 0.2, 0.2, 1.0)
     else
-        gfx.rgba(0.2, 0.8, 0.8, 0.5)
+        gfx.rgba(0.2, 0.8, 0.8, 1.0)
     end
 end
 
@@ -286,11 +286,13 @@ end
 
 Camera :: blob {
     pos: (float, float),
+    shake_strength: float,
 }
 
 new_camera :: fn a, b -> Camera
     camera :: Camera {
         pos: (0.0, 0.0),
+        shake_strength: 0.0,
     }
     update_camera' camera, 1.0, a, b
 end
@@ -309,13 +311,18 @@ update_camera :: fn given, delta, a, b -> Camera
     target :: center + half_screen
 
     Camera {
-        pos: lerp_v2(delta * 1.0, given.pos, center * (1.0, 0.0) + half_screen + (0.0, 100.0)),
+        pos: lerp_v2(delta, given.pos, center * (1.0, 0.0) + half_screen + (0.0, 100.0)),
+        shake_strength: min(5.0, lerp(delta, given.shake_strength, 0.0)),
     }
 end
 
 push_camera :: fn camera do
     gfx.reset_camera()
     gfx.move_camera' camera.pos
+
+    sample :: fn -> math.random() * (1.0 - 0.5) * camera.shake_strength * camera.shake_strength end
+    gfx.move_camera' (sample() * 2.0, sample() * 2.0)
+    gfx.zoom_camera' 1.0 + sample() * 0.001
 end
 
 // GS
@@ -477,6 +484,7 @@ update :: fn state: State, delta: float, gamepads -> State
                 add_explosion :: fn a do
                     if not a.alive do
                         list.push(state.explosions, explosion_from_bullet(a))
+                        state.camera.shake_strength += 2.0
                     end
                 end
 
