@@ -697,7 +697,7 @@ draw_object :: fn object, color do
 end
 
 draw_button :: fn text, pos, color do
-    gfx.drawRectCenteredOutline(color, pos, (30.0, 30.0))
+    gfx.drawCircleOutline(color, pos, 18.0)
     assets.fontSmall.drawTextF(color, text, pos + (-100.0, -12.5), gfx.Alignment.Center, 200.0)
 end
 
