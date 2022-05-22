@@ -7,6 +7,8 @@ from main use new_gamepad
 use particles
 use unsafe
 
+win_score :: 1
+
 bool_to_int :: pu x: bool -> float
     if x do
         1.0
@@ -333,6 +335,7 @@ end
 GameState :: enum
     Playing
     Menu
+    Victory
 end
 
 MenuTrigger :: blob {
@@ -359,6 +362,7 @@ State :: blob {
 
     score: (int, int),
     menu_trigger: MenuTrigger,
+    victor: int,
 }
 
 new :: fn ->
@@ -375,6 +379,7 @@ new :: fn ->
         player_b: player_b,
 
         score: (0, 0),
+        victor: 0,
 
         background_particles: particles.background_particles(),
         splash_particles: particles.splash_particles(),
@@ -425,11 +430,19 @@ update :: fn state: State, delta: float, gamepads -> State
 
                 state.explosions = []
 
-                if dbg(abs(state.player_a.killed - state.player_b.killed)) > 30 do
+                if abs(state.player_a.killed - state.player_b.killed) > 30 do
                     if state.player_a.killed < state.player_b.killed do
                         state.score += (1, 0)
                     else do
                         state.score += (0, 1)
+                    end
+                    if state.score[0] >= win_score do
+                        state.current_state = GameState.Victory
+                        state.victor = 0
+                    end
+                    if state.score[1] >= win_score do
+                        state.current_state = GameState.Victory
+                        state.victor = 1
                     end
                 end
 
@@ -569,6 +582,13 @@ update :: fn state: State, delta: float, gamepads -> State
                 assets.random_ready()
             end
         end
+        Victory ->
+            gp_a :: dict.get(gamepads, state.player_a.id) -> maybe.orDefault(new_gamepad())
+            gp_b :: dict.get(gamepads, state.player_b.id) -> maybe.orDefault(new_gamepad())
+            if input.isKeyDown(input.Key.W) or gp_a.jump or input.isKeyDown(input.Key.Up) or gp_b.jump do
+                state.current_state = GameState.Menu
+            end
+        end
     end
     state.frame += 1
 
@@ -668,7 +688,7 @@ draw :: fn state: State do
 
     case state.current_state do
         Playing ->
-            ww :: 80.0
+            ww :: 90.0
             left_score_pos :: (screenDim[0] * 0.15 - 80.0, 25.0)
             assets.font.drawTextF(id_to_color(0), as_str(state.score[0]), left_score_pos, gfx.Alignment.Center, ww)
 
@@ -692,6 +712,26 @@ draw :: fn state: State do
             end
 
             state.explosions -> list.for_each' draw_explosion
+        end
+        Victory ->
+            ww :: 80.0
+            left_score_pos :: (screenDim[0] * 0.15 + 80.0, screenDim[1] * 0.5)
+            assets.font.drawTextF(id_to_color(0), as_str(state.score[0]), left_score_pos, gfx.Alignment.Center, ww)
+
+            right_score_pos :: (screenDim[0] * 0.85 - 160.0, screenDim[1] * 0.5)
+            assets.font.drawTextF(id_to_color(1), as_str(state.score[1]), right_score_pos, gfx.Alignment.Center, ww)
+
+            winner_text :: if state.victor == 0 do
+                "Red wins!"
+            else do
+                "Blue wins!"
+            end
+            p :: (screenDim[0] * 0.5, screenDim[1] * 0.5 - 200.0)
+            assets.font.drawTextF( id_to_color(state.victor)
+                                 , winner_text
+                                 , p - (400.0, 0.0)
+                                 , gfx.Alignment.Center
+                                 , 800.0)
         end
         Menu ->
             assets.font.drawTextF(gfx.rgb(1.0, 1.0, 1.0), "Shooty 2", (0.0, screenDim[1] / 2.0 - 75.0), gfx.Alignment.Center, screenDim[0])
