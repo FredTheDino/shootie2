@@ -14,3 +14,4 @@ TODO:
  - [ ] Mini tutorial
  - [ ] Camera shake
  - [ ] (Fishing minigame)
+ - [ ] Score
