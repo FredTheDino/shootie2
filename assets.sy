@@ -1,8 +1,47 @@
 use gfx
+use sfx
 from love use love
+from unsafe use unsafe_force
 
 banana :: gfx.newImage' "res/banana.png"
 square :: gfx.newImage' "res/particle.png"
 
 font :: gfx.createFont' love.graphics.newFont("res/Ubuntu-Title.ttf", 100)
 fontSmall :: gfx.createFont' love.graphics.newFont("res/Ubuntu-Title.ttf", 25)
+
+random_jump :: fn do
+    s :: list.random_choice(jumps) -> maybe.orDefault(unsafe_force(1))
+    s.playp((1.0, 0.1), (1.0, 0.02))
+end
+
+jumps :: (fn ->
+         [ sfx.newSound("res/jump_1.wav", false, sfx.SoundType.Static)
+         , sfx.newSound("res/jump_2.wav", false, sfx.SoundType.Static)
+         , sfx.newSound("res/jump_2.wav", false, sfx.SoundType.Static)
+         ] end)()
+
+random_explosion :: fn do
+    s :: list.random_choice(explosions) -> maybe.orDefault(unsafe_force(1))
+    s.playp((1.0, 0.1), (1.0, 0.02))
+end
+
+explosions :: (fn -> [ sfx.newSound("res/explosion_1.wav", false, sfx.SoundType.Static)
+              , sfx.newSound("res/explosion_2.wav", false, sfx.SoundType.Static)
+              , sfx.newSound("res/explosion_3.wav", false, sfx.SoundType.Static)
+              ] end)()
+
+random_end_of_turns :: fn do
+    s :: list.random_choice(end_of_turns) -> maybe.orDefault(unsafe_force(1))
+    s.playp((1.0, 0.1), (1.0, 0.02))
+end
+
+end_of_turns :: (fn -> [ sfx.newSound("res/end_1.wav", false, sfx.SoundType.Static)
+                       , sfx.newSound("res/end_2.wav", false, sfx.SoundType.Static)
+                       ] end)()
+
+random_ready :: fn do
+    ready.playp((1.0, 0.1), (1.0, 0.02))
+end
+
+
+ready :: sfx.newSound' "res/ready.wav", false, sfx.SoundType.Static

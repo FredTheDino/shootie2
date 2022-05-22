@@ -109,6 +109,7 @@ update_explosion :: fn explosion, state, delta do
 
     if inside_explosion_radius(explosion, state.player_a.pos) do
         state.player_a.killed = state.frame
+        assets.random_end_of_turns()
     elif state.player_a.killed == -1 do
         p :: state.player_a.pos
         d :: math.distance(p, explosion.pos) - explosion_radius(explosion)
@@ -119,6 +120,7 @@ update_explosion :: fn explosion, state, delta do
 
     if inside_explosion_radius(explosion, state.player_b.pos) do
         state.player_b.killed = state.frame
+        assets.random_end_of_turns()
     elif state.player_b.killed == -1 do
         p :: state.player_b.pos
         d :: math.distance(p, explosion.pos) - explosion_radius(explosion)
@@ -221,6 +223,7 @@ update_player :: fn player, aim_dir, frame, delta do
     if pressed(player.input.jump, frame) do
         player.vel = (player.vel[0], -jump_force)
         player.jumps -= 1
+        assets.random_jump()
     elif held(player.input.jump, frame, 20) do
         player.vel += (0.0, -hover_force * delta)
     end
@@ -495,6 +498,7 @@ update :: fn state: State, delta: float, gamepads -> State
                     if not a.alive do
                         list.push(state.explosions, explosion_from_bullet(a))
                         state.camera.shake_strength += 2.0
+                        assets.random_explosion()
                     end
                 end
 
@@ -529,6 +533,7 @@ update :: fn state: State, delta: float, gamepads -> State
                 and state.menu_trigger.b_r1) do
                 state.current_state = GameState.Playing
                 state.score = (0, 0)
+                assets.random_ready()
             end
         end
     end
