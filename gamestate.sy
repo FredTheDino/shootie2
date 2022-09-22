@@ -77,7 +77,7 @@ bullet_hitbox_size :: (10.0, 10.0)
 
 update_bullet :: fn bullet, delta do
     bullet.lifetime += delta
-    bullet.pos += bullet.vel
+    bullet.pos += bullet.vel * (delta * 60.0, delta * 60.0)
 
     if bullet.lifetime > 0.4 do
         ss :: delta * 4.0
